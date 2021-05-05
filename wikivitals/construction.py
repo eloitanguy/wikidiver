@@ -1,25 +1,10 @@
 # Adapted code by Armand Boschin
 
-import pandas as pd
-import numpy as np
 import requests
 import wikipedia
 import os
 
 from bs4 import BeautifulSoup
-from tqdm.notebook import tqdm
-
-from scipy import sparse
-from collections import defaultdict
-
-import nltk
-from nltk.corpus import stopwords
-from nltk.tokenize import word_tokenize
-from nltk.stem.porter import PorterStemmer
-
-wikipedia.set_lang("en")
-wiki_url = 'https://en.wikipedia.org'
-sep = '|||'
 
 
 def get_categories(_url):
@@ -65,245 +50,103 @@ def clean_text(word):
     return word.split('|')[0]
 
 
-def get_article(_filename, general_category):
-    category = []
-    with open(_filename) as _f:
-        for _row in _f:
-            if len(_row):
-                if _row[0] == '=':
-                    # new category
-                    k = 0
-                    while _row[k] == '=':
-                        k += 1
-                    if k > 1:
-                        category = category[:k - 1]
-                    category += [clean_text(_row)]
-                    sub_category = []
-                elif _row[0] == '#':
-                    # new entry
-                    articles.append(clean_text(_row))
-                    k = 0
-                    while _row[k] == '#':
-                        k += 1
-                    sub_category = sub_category[:k - 1] + [clean_text(_row)]
-                    if category[0] == general_category:
-                        categories.append(sep.join(category + sub_category[:-1]))
-                    else:
-                        categories.append(sep.join([general_category] + category + sub_category[:-1]))
+def get_structure():
+    """
+    Saves the article structure on disk and returns the lists of articles and categories,
+    and the dictionary of the main category names
+    """
+
+    _articles = []
+    _categories = []
+
+    def get_article(article_filename, general_category, sep='|||'):
+        """
+        Adds the given article to the "articles, categories, general" current structure
+        """
+        category = []
+        with open(article_filename) as _f:
+            for _row in _f:
+                if len(_row):
+                    if _row[0] == '=':
+                        # new category
+                        k = 0
+                        while _row[k] == '=':
+                            k += 1
+                        if k > 1:
+                            category = category[:k - 1]
+                        category += [clean_text(_row)]
+                        sub_category = []
+                    elif _row[0] == '#':
+                        # new entry
+                        _articles.append(clean_text(_row))
+                        k = 0
+                        while _row[k] == '#':
+                            k += 1
+                        sub_category = sub_category[:k - 1] + [clean_text(_row)]
+                        if category[0] == general_category:
+                            _categories.append(sep.join(category + sub_category[:-1]))
+                        else:
+                            _categories.append(sep.join([general_category] + category + sub_category[:-1]))
+
+    categories_dict = get_categories('https://en.wikipedia.org/wiki/Wikipedia:Vital_articles/Level/5')
+    _general = {k: v.split('/')[5] for k, v in categories_dict.items()}
+    filenames = list(categories_dict.keys())
+
+    if not os.path.exists('data/mds/'):
+        os.makedirs('data/mds/')
+
+    for k, v in categories_dict.items():  # saves the category pages' text
+        with open('data/mds/{}'.format(k), 'w', encoding='utf8') as f:
+            url = "https://en.wikipedia.org/w/index.php?title={}&action=edit".format(v[6:])
+            page = requests.get(url)
+            soup = BeautifulSoup(page.text, 'html.parser')
+            f.write(soup.find('textarea').text)
+
+    for filename in filenames:
+        get_article('data/mds/' + filename, _general[filename])
+
+    with open('data/en-categories.txt', 'w', encoding='utf8') as file:
+        for cat in _categories:
+            file.write(cat + "\n")
+
+    with open('data/en-articles.txt', 'w', encoding='utf8') as file:
+        for name in _articles:
+            file.write(name + "\n")
+
+    return _articles, _categories, _general
 
 
-# ################# #
-# English Wikipedia #
-# ################# #
-
-categories = get_categories('https://en.wikipedia.org/wiki/Wikipedia:Vital_articles/Level/5')
-general = {k: v.split('/')[5] for k, v in categories.items()}
-filenames = list(categories.keys())
-
-if not os.path.exists('data/mds/'):
-    os.makedirs('data/mds/')
-
-for k, v in categories.items():  # saves the category pages' text
-    with open('data/mds/{}'.format(k), 'w', encoding='utf8') as f:
-        url = "https://en.wikipedia.org/w/index.php?title={}&action=edit".format(v[6:])
-        page = requests.get(url)
-        soup = BeautifulSoup(page.text, 'html.parser')
-        f.write(soup.find('textarea').text)
-
-articles = []
-categories = []
-
-for filename in filenames:
-    get_article('data/mds/' + filename, general[filename])
-
-with open('data/en-categories.txt', 'w', encoding='utf8') as f:
-    for cat in categories:
-        f.write(cat + "\n")
-
-with open('data/en-articles.txt', 'w', encoding='utf8') as f:
-    for name in articles:
-        f.write(name + "\n")
+def clean_content_list(text):
+    text = clean_text(text)
+    text.replace('...', '.')  # we will split sentences using dots
+    text.replace('\n', '')
+    # remove small sentences (correspond to most headers and blank lines):
+    text_sentences_filtered = [sentence for sentence in text.split('.') if len(sentence) > 30]
+    return text_sentences_filtered
 
 
-def scrapping(_names, _filename, size=1000, _sep='|||'):
-    text_file = open('data/' + _filename + '-texts.txt', 'w', encoding='utf8')
-    link_file = open('data/' + _filename + '-links.txt', 'w', encoding='utf8')
-
-    _texts = {}
-    _links = {}
-    for idx, name1 in tqdm(enumerate(_names), total=len(_names)):
-        try:
-            article = wikipedia.page(name1)
-            _texts[name1] = article.summary
-            _links[name1] = article.links
-        except:
-            pass
-
-        if not idx % size:
-            for name2 in _texts:
-                text_file.write(name2 + _sep + _texts[name2].replace('\n', ' ') + "\n")
-            for name2 in _links:
-                link_file.write(name2 + _sep + _sep.join(_links[name2]) + "\n")
-            _texts = {}
-            _links = {}
-
-    for name1 in _texts:
-        text_file.write(name1 + _sep + _texts[name1].replace('\n', ' ') + "\n")
-    for name1 in _links:
-        link_file.write(name1 + _sep + _sep.join(_links[name1]) + "\n")
+def get_article_text_by_name(name):
+    """
+    Outputs the text as a list of sentences
+    """
+    article = wikipedia.page(name)
+    raw = article.content
+    return clean_content_list(raw)
 
 
-scrapping(articles, 'en')
+class ArticleRetriever(object):
+    def __init__(self, article_filename):
+        with open(article_filename, 'r') as f:
+            self.articles_file = f
 
-# ###### #
-# Export #
-# ###### #
+    def retrieve(self):
+        for name in self.articles_file:
+            text = get_article_text_by_name(name)
+            # TODO: define a saving method
 
-texts = {}
-with open('data/en-texts.txt') as f:
-    for row in f:
-        words = row.split(sep)
-        texts[words[0]] = words[1][:-1]
 
-links = {}
-with open('data/en-links.txt') as f:
-    for row in f:
-        words = row.split(sep)
-        links[words[0]] = words[1:][:-1]
-
-names = []
-with open('data/en-articles.txt') as f:
-    for row in f:
-        names.append(row[:-1])
-
-categories = []
-with open('data/en-categories.txt') as f:
-    for row in f:
-        categories.append(row[:-1])
-
-ix2name = dict()
-ix2cat = dict()
-name2ix = dict()
-
-for i in range(len(names)):
-    ix2name[i] = names[i]
-    ix2cat[i] = categories[i].replace('_', ' ')
-    name2ix[names[i]] = i
-
-#  Only keep the names/pages that have an entry in links.
-tmp = list(links.keys())
-tmp.sort()
-ix2cat = {i: ix2cat[name2ix[tmp[i]]] for i in range(len(tmp))}
-ix2name = {i: n for i, n in enumerate(tmp)}
-name2ix = {v: k for k, v in ix2name.items()}
-row = []
-col = []
-for name in tmp:
-    try:
-        for L in links[name]:
-            name_ = L.split('|')[0]
-            if name_ in name2ix.keys():
-                row.append(name2ix[name])
-                col.append(name2ix[name_])
-    except KeyError:
-        pass
-
-# ######### #
-# Adjacency #
-# ######### #
-
-df = pd.DataFrame(np.array([row, col])).T
-df.columns = ['from', 'to']
-
-df = df.sort_values(['from', 'to'])
-df.reset_index(drop=True, inplace=True)
-
-df['value'] = True
-df.to_csv('data/output/adjacency.csv', sep=',', header=False, index=False)
-
-# ###### #
-# Labels #
-# ###### #
-
-cats = dict()
-for c in general.values():
-    if c.replace('_', ' ') not in cats.keys():
-        cats[c.replace('_', ' ')] = len(cats)
-
-labels = pd.DataFrame([cats[c] for c in [ix2cat[i].split(sep)[0] for i in range(len(ix2cat))]])
-labels.to_csv('data/output/labels.csv', sep=',', header=False, index=False)
-pd.DataFrame(list(cats.keys())).to_csv('data/output/names_labels.csv', sep=',', header=False, index=False)
-
-# ################ #
-# Labels Hierarchy #
-# ################ #
-
-hierarchies = list(set(['.'.join(ix2cat[i].split(sep)) for i in range(len(ix2cat))]))
-
-tmp_ = defaultdict(list)
-for h in hierarchies:
-    tmp_[cats[h.split('.')[0]]].append(h)
-
-for k, v in tmp_.items():
-    v.sort()
-
-cats = []
-for i in range(len(tmp_)):
-    cats.extend(tmp_[i])
-
-assert len(cats) == len(hierarchies)
-
-cats = {c: i for i, c in enumerate(cats)}
-labels = pd.DataFrame([cats['.'.join(c.split(sep))] for c in [ix2cat[i] for i in range(len(ix2cat))]])
-labels.to_csv('data/output/labels_hierarchy.csv', sep=',', header=False, index=False)
-pd.DataFrame(list(cats.keys())).to_csv('data/output/names_labels_hierarchy.csv', sep=',', header=False, index=False)
-pd.DataFrame(tmp).to_csv('data/output/names.csv', sep=',', header=False, index=False)
-
-# ############### #
-# Post-processing #
-# ############### #
-
-text = {}
-with open('data/en-texts.txt', 'r', encoding='utf8') as f:
-    for row in f:
-        name, summary = tuple(row.split(sep))
-        text[name] = summary[:-1]
-
-nltk.download('stopwords')
-language = 'english'
-stop_words = stopwords.words(language)
-
-porter = PorterStemmer()
-text_stems = {}
-for name in text:
-    tokens = [word.lower() for word in word_tokenize(text[name])]
-    text_stems[name] = [porter.stem(token) for token in tokens if token.isalpha() and token not in stop_words]
-
-stems = []
-for s in text_stems.values():
-    stems += s
-
-unique_stems = set(stems)
-stem_index = {stem: i for i, stem in enumerate(unique_stems)}
-
-edges = [(name2ix[n], stem_index[s]) for n, l in text_stems.items() for s in l]
-row = [edge[0] for edge in edges]
-col = [edge[1] for edge in edges]
-biadjacency = sparse.csr_matrix((np.ones(len(edges)), (row, col)))
-counts = biadjacency.T.dot(np.ones(biadjacency.shape[0]))
-index = np.where(counts > 1)[0]
-biadjacency = biadjacency[:, index]
-
-stems = list(np.array(list(unique_stems))[index])
-pd.DataFrame(stems).to_csv('data/output/names_col.csv', sep=',', index=False, header=False)
-
-df = pd.DataFrame(np.concatenate(
-    (biadjacency.nonzero()[0].reshape(-1, 1),
-     biadjacency.nonzero()[1].reshape(-1, 1),
-     biadjacency.data.reshape(-1, 1)),
-    axis=1))
-df.columns = ['from', 'to', 'val']
-df['from'] = df['from'].astype('long')
-df['to'] = df['to'].astype('long')
-df['val'] = df['val'].astype('long')
-df.to_csv('data/output/biadjacency.csv', index=False, sep=',', header=False)
+if __name__ == '__main__':
+    wikipedia.set_lang("en")
+    articles, categories, general = get_structure()
+    ar = ArticleRetriever('data/en-articles.txt')
+    ar.retrieve()
