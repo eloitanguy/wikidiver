@@ -92,24 +92,24 @@ def get_structure():
     _general = {k: v.split('/')[5] for k, v in categories_dict.items()}
     filenames = list(categories_dict.keys())
 
-    if not os.path.exists('data/mds/'):
-        os.makedirs('data/mds/')
+    if not os.path.exists('wikivitals/data/mds/'):
+        os.makedirs('wikivitals/data/mds/')
 
     for k, v in categories_dict.items():  # saves the category pages' text
-        with open('data/mds/{}'.format(k), 'w', encoding='utf8') as f:
+        with open('wikivitals/data/mds/{}'.format(k), 'w', encoding='utf8') as f:
             url = "https://en.wikipedia.org/w/index.php?title={}&action=edit".format(v[6:])
             page = requests.get(url)
             soup = BeautifulSoup(page.text, 'html.parser')
             f.write(soup.find('textarea').text)
 
     for filename in filenames:
-        get_article('data/mds/' + filename, _general[filename])
+        get_article('wikivitals/data/mds/' + filename, _general[filename])
 
-    with open('data/en-categories.txt', 'w', encoding='utf8') as file:
+    with open('wikivitals/data/en-categories.txt', 'w', encoding='utf8') as file:
         for cat in _categories:
             file.write(cat + "\n")
 
-    with open('data/en-articles.txt', 'w', encoding='utf8') as file:
+    with open('wikivitals/data/en-articles.txt', 'w', encoding='utf8') as file:
         for name in _articles:
             file.write(name + "\n")
 
@@ -148,5 +148,5 @@ class ArticleRetriever(object):
 if __name__ == '__main__':
     wikipedia.set_lang("en")
     articles, categories, general = get_structure()
-    ar = ArticleRetriever('data/en-articles.txt')
+    ar = ArticleRetriever('wikivitals/data/en-articles.txt')
     ar.retrieve()

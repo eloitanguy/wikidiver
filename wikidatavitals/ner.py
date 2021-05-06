@@ -2,6 +2,7 @@ import spacy
 import neuralcoref
 import urllib
 import json
+from copy import copy
 
 
 def character_idx_to_word_idx(text):
@@ -51,7 +52,7 @@ class CoreferenceResolver(object):
         return "".join(tok_list)
 
 
-def wikifier(text, threshold=0.9):
+def wikifier(text, threshold=1, grouped=True):
     """
     Function that fetches entity linking results from wikifier.com API, includes code from:
     https://towardsdatascience.com/from-text-to-knowledge-the-information-extraction-pipeline-b65e7e30273e
@@ -70,11 +71,13 @@ def wikifier(text, threshold=0.9):
         ("includeCosines", "false"), ("maxMentionEntropy", "3")
     ])
     url = "http://www.wikifier.org/annotate-article"
+
     # Call the Wikifier and read the response.
     req = urllib.request.Request(url, data=data.encode("utf8"), method="POST")
     with urllib.request.urlopen(req, timeout=60) as open_request:
         response = open_request.read()
         response = json.loads(response.decode("utf8"))
+
     # Output the annotations.
     results = []
     annotated = [False] * len(text.split(' '))  # only annotate once every word index
@@ -84,18 +87,45 @@ def wikifier(text, threshold=0.9):
         characters = [(el['chFrom'], el['chTo']) for el in annotation['support']]
         for start_char, end_char in characters:
             start_w, end_w = char_map[start_char], char_map[end_char]
+            mention = text[start_char:end_char+1]
             for w_idx in range(start_w, end_w+1):
                 if not annotated[w_idx]:  # remove duplicates
-                    results.append([w_idx, annotation['wikiDataItemId'], annotation['title']])
+                    results.append([w_idx, annotation['wikiDataItemId'], annotation['title'], mention])
                     annotated[w_idx] = True
-    return results
+
+    return get_grouped_ner_results(results) if grouped else results
 
 
-if __name__ == '__main__':
-    t = 'A member of the Democratic Party, Barack Obama was the first African-American president of the United States'
-    print('Example sentence: ', t)
-    coreference_resolver = CoreferenceResolver()
-    processed_text = coreference_resolver(t)
+def get_grouped_ner_results(result_list):
+    """
+    Used for grouping the outputs of wikifier.
+    :param result_list: a list of [idx, wikidatavitals id, name, mention] detections (one per detected word)
+    :return: a dictionary of detections: (inclusive indices) {start_idx, end_idx, wikidatavitals id, name, mention}
+    """
 
-    with open('test_output.json', 'w') as f:
-        json.dump(wikifier(processed_text), f, indent=4)
+    if not result_list:
+        return []
+
+    current_start_idx = 0
+    previous_id = result_list[0][1]  # assigning a fake -1-th word with the same label as the first one
+    res = []
+
+    for word_idx, word_output in enumerate(result_list):
+        new_id = word_output[1]
+        if new_id != previous_id:  # changed entity
+            res.append({'start_idx': current_start_idx,
+                        'end_idx': result_list[word_idx-1][0],
+                        'id': result_list[word_idx-1][1],
+                        'name': result_list[word_idx-1][2],
+                        'mention': result_list[word_idx-1][3]})
+            current_start_idx = result_list[word_idx][0]
+            previous_id = new_id
+
+    # add the last one
+    res.append({'start_idx': current_start_idx,
+                'end_idx': result_list[-1][0],
+                'id': result_list[-1][1],
+                'name': result_list[-1][2],
+                'mention': result_list[-1][3]})
+
+    return res
