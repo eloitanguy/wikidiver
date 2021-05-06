@@ -2,7 +2,7 @@
 
 ## V1: Comparing sentences
 
-We compare a query sentence with a list of generated sentence of the form <entity 1> <verb> <entity 2>
+We compare a query sentence with a list of generated sentence of the form "entity 1" "verb" "entity 2"
 
 #### Obtaining verbs
 
@@ -32,7 +32,8 @@ The file weighs 1,4 MB and the execution takes a few seconds.
 
 #### Extracting facts
 
-*WIP*
+We apply the comparison method to all the (ordered) entities in the original sentence, then for each pair we find the most similar property.
+TODO: find a thresholding/filter method to avoid creating facts, eg 'Carlos Santana is a Mexican guitarist.': we don't want a property between "Mexican (nationality)" and "guitarist (occupation".
 
 ## V2 Ideas
 
