@@ -62,6 +62,20 @@ def build_entity_dictionary():
         json.dump(kg.entid2pagename, f, indent=4)
 
 
+def build_verb_idx_to_relation_list(verbs_file='wikidatavitals/data/property_verbs.json'):
+
+    with open(verbs_file, 'r') as f:
+        verbs = json.load(f)
+
+    res = []
+
+    for verb_id, verb_list in verbs.items():
+        res.extend([verb_id]*len(verb_list))
+
+    with open('wikidatavitals/data/verb_idx2id.json', 'w') as f:
+        json.dump(res, f, indent=4)
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--v', '--verbs', action='store_true')
@@ -72,6 +86,7 @@ if __name__ == '__main__':
     if args.v:
         print('Building the property-to-verbs dictionary ...')
         build_property_verbs_dictionary(args.n_verbs)
+        build_verb_idx_to_relation_list()
 
     if args.e:
         print('Building the entity-to-name dictionary ...')

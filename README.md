@@ -14,6 +14,8 @@ The following command saves a dictionary to ```wikidata/data/property_verbs.json
 
 The created file weighs 98.7 kB (with a maximum amount of verbs set to 5), the process takes around 7 minutes.
 
+We also save a list at ```wikidata/data/verb_idx2id.json``` mapping the index of a verb to its original property ID.
+
 #### Comparing sentences
 
 We chose the Universal Sentence Encoder as a vector representation for our sentences.
@@ -28,7 +30,7 @@ We save this dictionary in ```wikidata/data/entities.json``` quickly with:
     
     python wikidata/dataset.py --entities
 
-The file weighs 1,4 MB and the execution takes a few seconds.
+The file weighs 1.4 MB and the execution takes a few seconds.
 
 #### Extracting facts
 

@@ -52,7 +52,7 @@ class CoreferenceResolver(object):
         return "".join(tok_list)
 
 
-def wikifier(text, threshold=1, grouped=True):
+def wikifier(text, threshold=0.9, grouped=True):
     """
     Function that fetches entity linking results from wikifier.com API, includes code from:
     https://towardsdatascience.com/from-text-to-knowledge-the-information-extraction-pipeline-b65e7e30273e

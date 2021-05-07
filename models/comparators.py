@@ -26,7 +26,6 @@ class UniversalSentenceEncoderComparator(object):
         :param candidates: list of n sentences
         :return: the n cosine similarities
         """
-        print([query] + candidates)
         out = self.model([query] + candidates)
         v_query, v_candidates = out[0, :].numpy(), out[1:, :].numpy()
         return cosine_similarity(v_query, v_candidates)
