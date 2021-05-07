@@ -8,7 +8,8 @@ We compare a query sentence with a list of generated sentence of the form "entit
 
 We take the aliases of the wikidata-vitals relations from [TorchKGE](https://torchkge.readthedocs.io/en/latest/).
 
-The following command saves a dictionary to ```wikidata/data/property_verbs.json``` that maps a wikidata entity ID to a list of verbs that represent it:
+The following command saves a dictionary to ```wikidata/data/property_verbs.json``` that maps a wikidata entity ID to a 
+list of verbs that represent it:
 
     python wikidata/dataset.py --verbs
 
@@ -34,12 +35,24 @@ The file weighs 1.4 MB and the execution takes a few seconds.
 
 #### Extracting facts
 
-We apply the comparison method to all the (ordered) entities in the original sentence, then for each pair we find the most similar property.
-TODO: find a thresholding/filter method to avoid creating facts, eg 'Carlos Santana is a Mexican guitarist.': we don't want a property between "Mexican (nationality)" and "guitarist (occupation".
+We apply the comparison method to all the (ordered) entities in the original sentence, then for each pair we find the 
+most similar property.
 
-## V2 Ideas
+TODO: find a thresholding/filter method to avoid creating facts, eg 'Carlos Santana is a Mexican guitarist.': 
+we don't want a property between "Mexican (nationality)" and "guitarist (occupation)".
 
-- transform Wikidata into an annotated knowledge triplet dataset using Wikipedia sentence (Distant supervision). For this we need an entity recognition method.
+In order to test v1 on a sentence "[sentence]", run the command:
+
+    python v1.py "[sentence]"
+
+/!\ This uses a TensorFlow model (the Universal Sentence Encoder), so having a GPU available is recommended.
+
+#### WIP: Evaluate v1
+
+## V2 Id
+
+- transform Wikidata into an annotated knowledge triplet dataset using Wikipedia sentence (Distant supervision). 
+  For this we need an entity recognition method.
 - compute BERT [CLS] outputs on all the annotated sentences
 - train a model on the relation classification task
 
