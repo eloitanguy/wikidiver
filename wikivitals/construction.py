@@ -4,6 +4,7 @@ import requests
 import wikipedia
 import os
 from bs4 import BeautifulSoup
+import json
 
 
 def get_categories(_url):
@@ -124,16 +125,22 @@ def clean_content_list(text):
     return text_sentences_filtered
 
 
+def process_raw_text(raw):
+    text = clean_text(raw)
+    paragraphs = [p for p in text.split('\n') if len(p) > 30 and '.' in p]  # filters out most headers and blank lines
+    return paragraphs
+
+
 def get_article_text_by_name(name):
     article = wikipedia.page(name)
     raw = article.content
-    return clean_text(raw).replace('\n', '')
+    return process_raw_text(raw)
 
 
 def get_article_text_by_page_id(page_id):
     article = wikipedia.page(pageid=page_id)
     raw = article.content
-    return clean_text(raw).replace('\n', '')
+    return process_raw_text(raw)
 
 
 def get_page_id(name):
@@ -165,8 +172,8 @@ class ArticleRetriever(object):
                 print('Disambiguation error on ', name)
                 text = get_article_text_by_name(name)
 
-            with open(os.path.join('wikivitals/data/article_texts/', name + '.txt'), 'w') as f:
-                f.writelines(text)
+            with open(os.path.join('wikivitals/data/article_texts/', name + '.json'), 'w') as f:
+                json.dump(text, f, indent=4)
 
 
 def usa():
@@ -177,8 +184,8 @@ def usa():
         os.makedirs('wikivitals/data/benchmark/')
     name = 'United States'
     text = get_article_text_by_page_id(get_page_id(name))
-    with open(os.path.join('wikivitals/data/benchmark/', name + '.txt'), 'w') as f:
-        f.writelines(text)
+    with open(os.path.join('wikivitals/data/benchmark/', name + '.json'), 'w') as f:
+        json.dump(text, f, indent=4)
 
 
 if __name__ == '__main__':
