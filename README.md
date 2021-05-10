@@ -27,29 +27,53 @@ In order to compare two sentences together, we use the cosine similarity of thei
 #### Obtaining entities
 
 Thanks to TorchKGE, it is simple to access the id -> title mapping of wikidata-vitals entities.
-We save this dictionary in ```wikidata/data/entities.json``` quickly with:
+We save this dictionary in ```wikidata/data/entity_names.json``` quickly with:
     
     python wikidata/dataset.py --entities
 
 The file weighs 1.4 MB and the execution takes a few seconds.
 
+#### Obtaining relations (benchmarking only, for now)
+
+Just like for entities, we save a dictionary id -> title for the relations, as well as the list of all the fact triplets
+in Wikidata-vitals using:
+
+  python wikidata/dataset.py --relations
+
+This execution takes about a minute, and the two files weigh 31 kB and 6.9 MB.
+
 #### Extracting facts
 
-We apply the comparison method to all the (ordered) entities in the original sentence, then for each pair we find the 
-most similar property.
+We apply the comparison method to all the (ordered) entities in the original sentence, then for each pair 
+(that isn't too far away in the text) we find the most similar property.
 
-TODO: find a thresholding/filter method to avoid creating facts, eg 'Carlos Santana is a Mexican guitarist.': 
-we don't want a property between "Mexican (nationality)" and "guitarist (occupation)".
+We added a threshold method to avoid creating facts, eg 'Carlos Santana is a Mexican guitarist.': 
+we don't want a property between "Mexican (nationality)" and "guitarist (occupation)", so far this method isn't 
+too effective.
 
 In order to test v1 on a sentence "[sentence]", run the command:
 
-    python v1.py "[sentence]"
+    python v1.py --sentence "[sentence]"
 
 /!\ This uses a TensorFlow model (the Universal Sentence Encoder), so having a GPU available is recommended.
 
-#### WIP: Evaluate v1
+#### Evaluate v1
 
-## V2 Id
+In order to assess the quality of the knowledge extraction, we put it to the test on the USA article: we consider a
+predicted fact correct if the fact is already present in Wikidata-vitals.
+
+The benchmark requires a setup (please also go through the relation setup first!):
+
+    python benchmark.py --prepare
+
+It can then be run using:
+
+    python v1.py --benchmark
+
+This process takes 7 minutes with an RTX3090 (python allocates a lot of GPU memory but uses little GPU processing 
+power here).
+
+## V2 Ideas
 
 - transform Wikidata into an annotated knowledge triplet dataset using Wikipedia sentence (Distant supervision). 
   For this we need an entity recognition method.

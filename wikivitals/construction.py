@@ -176,7 +176,7 @@ class ArticleRetriever(object):
                 json.dump(text, f, indent=4)
 
 
-def usa():
+def save_usa_text():
     """
     Saves the text of the USA article (for benchmarking)
     """

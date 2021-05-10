@@ -36,3 +36,18 @@ def get_comparison_sentences(e1, e2, property_verbs):
     for verbs in property_verbs.values():
         res.extend([e1 + ' ' + verb + ' ' + e2 for verb in verbs])
     return res
+
+
+def get_sliced_relation_mention(e1_dict, e2_dict, sentence):
+    """
+    :param e1_dict: {start_idx, end_idx, wikidatavitals id, name, mention}
+    :param e2_dict: {start_idx, end_idx, wikidatavitals id, name, mention}
+    :param sentence: text sentence mentioning e1 and e2
+    :return: the same text sliced between e1 and e2 (inclusive)
+    """
+    start_word_idx = e1_dict['start_idx']
+    end_word_idx = e2_dict['end_idx'] + 1  # the index is inclusive and Python is exclusive
+    res_list = sentence.split(' ')
+    res_list = res_list[start_word_idx:end_word_idx]
+    return ' '.join(res_list)
+
