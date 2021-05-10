@@ -33,7 +33,7 @@ def extract_facts(sentence):
                                     for pair_dict in entity_pairs]
     Comparator = UniversalSentenceEncoderComparator()
 
-    # Comparison of each paris
+    # Comparison of each pair
     for pair_idx in range(len(entity_pairs)):
         comparison_sentences = comparison_sentences_by_pair[pair_idx]
         e1_dict, e2_dict = entity_pairs[pair_idx]['e1'], entity_pairs[pair_idx]['e2']

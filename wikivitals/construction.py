@@ -3,7 +3,6 @@
 import requests
 import wikipedia
 import os
-
 from bs4 import BeautifulSoup
 
 
@@ -126,27 +125,64 @@ def clean_content_list(text):
 
 
 def get_article_text_by_name(name):
-    """
-    Outputs the text as a list of sentences
-    """
     article = wikipedia.page(name)
     raw = article.content
-    return clean_content_list(raw)
+    return clean_text(raw).replace('\n', '')
+
+
+def get_article_text_by_page_id(page_id):
+    article = wikipedia.page(pageid=page_id)
+    raw = article.content
+    return clean_text(raw).replace('\n', '')
+
+
+def get_page_id(name):
+    if name[0] == ' ':  # common error caused by a space before the name
+        name = name[1:]
+    name = name.replace(' ', '%20').replace('\n', '')  # formatting for html query
+    url = "https://en.wikipedia.org/w/api.php?action=query&titles={}&format=json".format(name)
+    json_response = requests.get(url).json()
+    page_id = list(json_response['query']['pages'].keys())[0]
+    return page_id  # output first found page id (there should only be one)
 
 
 class ArticleRetriever(object):
     def __init__(self, article_filename):
         with open(article_filename, 'r') as f:
-            self.articles_file = f
+            self.article_names = [line for line in f.readlines()]
 
-    def retrieve(self):
-        for name in self.articles_file:
-            text = get_article_text_by_name(name)
-            # TODO: define a saving method
+    def save_all_texts(self):
+        if not os.path.exists('wikivitals/data/article_texts/'):
+            os.makedirs('wikivitals/data/article_texts/')
+
+        for article_idx, name in enumerate(self.article_names):
+            page_id = get_page_id(name)
+            print('\n', name, page_id)
+            # We try to perform disambiguation by going by page ID, if that fails we resort to an imprecise search
+            try:
+                text = get_article_text_by_page_id(page_id)
+            except wikipedia.exceptions.PageError:
+                print('Disambiguation error on ', name)
+                text = get_article_text_by_name(name)
+
+            with open(os.path.join('wikivitals/data/article_texts/', name + '.txt'), 'w') as f:
+                f.writelines(text)
+
+
+def usa():
+    """
+    Saves the text of the USA article (for benchmarking)
+    """
+    if not os.path.exists('wikivitals/data/benchmark/'):
+        os.makedirs('wikivitals/data/benchmark/')
+    name = 'United States'
+    text = get_article_text_by_page_id(get_page_id(name))
+    with open(os.path.join('wikivitals/data/benchmark/', name + '.txt'), 'w') as f:
+        f.writelines(text)
 
 
 if __name__ == '__main__':
-    wikipedia.set_lang("en")
-    articles, categories, general = get_structure()
-    ar = ArticleRetriever('wikivitals/data/en-articles.txt')
-    ar.retrieve()
+    # wikipedia.set_lang("en")
+    # ar = ArticleRetriever('wikivitals/data/en-articles.txt')
+    # ar.save()
+    usa()
