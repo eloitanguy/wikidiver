@@ -65,6 +65,15 @@ def save_entity_dictionary():
     with open('wikidatavitals/data/entity_names.json', 'w') as f:
         json.dump(kg.entid2pagename, f, indent=4)
 
+    client = Client()
+    entity_aliases = {}
+
+    for ID in tqdm(list(kg.entid2pagename.keys())):
+        entity_aliases[ID] = get_names(ID, 10, client)
+
+    with open('wikidatavitals/data/entity_aliases.json', 'w') as f:
+        json.dump(entity_aliases, f, indent=4)
+
 
 def save_verb_idx_to_relation_list(verbs_file='wikidatavitals/data/property_verbs.json'):
     with open(verbs_file, 'r') as f:
@@ -119,6 +128,20 @@ def save_relations():
 
     with open('wikidatavitals/data/relation_counts.json', 'w') as f:
         json.dump(sorted_relations_list, f, indent=4)
+
+
+class WikiDataVitalsSentences(Dataset):
+    def __init__(self, dataset_type):
+        assert dataset_type in ["train", "val"]
+
+        with open('wikidatavitals/data/relations.json', 'r') as f:
+            all_relations = json.load(f)
+
+        train_val_split = int(0.66*len(all_relations))
+        self.triplets = all_relations[:train_val_split] if dataset_type == 'train' else all_relations[train_val_split:]
+
+        with open('wikidatavitals/data/property_verbs.json', 'r') as f:
+            self.verbs = json.load(f)
 
 
 if __name__ == '__main__':
