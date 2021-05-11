@@ -7,16 +7,29 @@ from benchmark import v1_usa_benchmark
 
 
 class V1(object):
-    def __init__(self):
+    def __init__(self, n_relations=50, threshold=0.9):
         self.coreference_solver = CoreferenceResolver()
         self.comparator = UniversalSentenceEncoderComparator()
+        self.n_relations = n_relations
+        self.threshold = threshold
+
+        with open('wikidatavitals/data/relation_counts.json', 'r') as f:
+            relation_counts = json.load(f)
+
+        self.relations_ids = [c[0] for c in relation_counts[:self.n_relations]]
 
         with open('wikidatavitals/data/property_verbs.json', 'r') as f:
-            self.verbs = json.load(f)
-        with open('wikidatavitals/data/verb_idx2id.json', 'r') as f:
-            self.verb_idx2id = json.load(f)
+            all_verbs = json.load(f)
 
-    def extract_facts(self, sentence, threshold=0.9, max_entity_pair_distance=3, verbose=False):
+        with open('wikidatavitals/data/verb_idx2id.json', 'r') as f:
+            all_verb_idx2id = json.load(f)
+
+        self.verbs = {relation_id: verb_list for relation_id, verb_list in all_verbs.items()
+                      if relation_id in self.relations_ids}
+
+        self.verb_idx2id = [property_id for property_id in all_verb_idx2id if property_id in self.relations_ids]
+
+    def extract_facts(self, sentence, max_entity_pair_distance=3, verbose=False):
         facts = []
 
         # Step 1: NER
@@ -55,7 +68,7 @@ class V1(object):
                     )
                 )
 
-            if sim > threshold:
+            if sim > self.threshold:
                 facts.append({
                     'e1_mention': e1_dict['mention'],
                     'e1_name': e1_dict['name'],

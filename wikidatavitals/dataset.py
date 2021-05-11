@@ -105,6 +105,21 @@ def save_relations():
     with open('wikidatavitals/data/relation_names.json', 'w') as f:
         json.dump(kg.relid2label, f, indent=4)
 
+    # computing relation counts
+    count_dict = {}
+    for triplet in triplets:
+        relation = triplet[1]
+        if relation not in count_dict:
+            count_dict[relation] = 0
+        count_dict[relation] += 1
+
+    values = [(ID, count) for (ID, count) in count_dict.items()]
+    sorted_relations = np.sort(np.array(values, dtype=[('id', 'S10'), ('count', int)]), order='count')[::-1]
+    sorted_relations_list = [(str(ID).replace("'", '').replace('b', ''), str(count)) for (ID, count) in sorted_relations.tolist()]
+
+    with open('wikidatavitals/data/relation_counts.json', 'w') as f:
+        json.dump(sorted_relations_list, f, indent=4)
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
