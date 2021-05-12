@@ -29,7 +29,7 @@ class V1(object):
         with open('wikidatavitals/data/relation_counts.json', 'r') as f:
             relation_counts = json.load(f)
 
-        self.relations_ids = [c[0] for c in relation_counts[:self.n_relations]]
+        self.relation_ids = [c[0] for c in relation_counts[:self.n_relations]]
 
         with open('wikidatavitals/data/property_verbs.json', 'r') as f:
             all_verbs = json.load(f)
@@ -38,9 +38,9 @@ class V1(object):
             all_verb_idx2id = json.load(f)
 
         self.verbs = {relation_id: verb_list for relation_id, verb_list in all_verbs.items()
-                      if relation_id in self.relations_ids}
+                      if relation_id in self.relation_ids}
 
-        self.verb_idx2id = [property_id for property_id in all_verb_idx2id if property_id in self.relations_ids]
+        self.verb_idx2id = [property_id for property_id in all_verb_idx2id if property_id in self.relation_ids]
 
     def extract_facts(self, sentence, max_entity_pair_distance=3, verbose=False):
         facts = []

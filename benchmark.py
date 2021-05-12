@@ -89,7 +89,7 @@ def v1_usa_benchmark(v1_extractor):
     for output_idx, output_dict in enumerate(all_v1_outputs):
         output_dict['is_correct'] = str(success_bool[output_idx])
 
-    with open('usa_v1_benchamrk_facts_results.json', 'w') as f:
+    with open('usa_v1_benchmark_facts_results.json', 'w') as f:
         json.dump([V1_CONFIG] + all_v1_outputs, f, indent=4)
 
     n_correct = np.sum(success01)

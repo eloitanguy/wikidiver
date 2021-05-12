@@ -186,10 +186,3 @@ def save_usa_text():
     text = get_article_text_by_page_id(get_page_id(name))
     with open(os.path.join('wikivitals/data/benchmark/', name + '.json'), 'w') as f:
         json.dump(text, f, indent=4)
-
-
-if __name__ == '__main__':
-    # wikipedia.set_lang("en")
-    # ar = ArticleRetriever('wikivitals/data/en-articles.txt')
-    # ar.save()
-    usa()

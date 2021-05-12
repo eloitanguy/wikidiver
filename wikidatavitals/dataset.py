@@ -6,6 +6,9 @@ from torchkge.utils.datasets import load_wikidata_vitals
 import argparse
 from tqdm import tqdm, trange
 import numpy as np
+from torch.utils.data import Dataset, DataLoader
+from transformers import BertTokenizer, BertModel
+import torch
 
 
 def get_names(ID: str, number, client=None):
@@ -124,24 +127,130 @@ def save_relations():
 
     values = [(ID, count) for (ID, count) in count_dict.items()]
     sorted_relations = np.sort(np.array(values, dtype=[('id', 'S10'), ('count', int)]), order='count')[::-1]
-    sorted_relations_list = [(str(ID).replace("'", '').replace('b', ''), str(count)) for (ID, count) in sorted_relations.tolist()]
+    sorted_relations_list = [(str(ID).replace("'", '').replace('b', ''), str(count)) for (ID, count) in
+                             sorted_relations.tolist()]
 
     with open('wikidatavitals/data/relation_counts.json', 'w') as f:
         json.dump(sorted_relations_list, f, indent=4)
 
 
-# class WikiDataVitalsSentences(Dataset):
-#     def __init__(self, dataset_type):
-#         assert dataset_type in ["train", "val"]
-#
-#         with open('wikidatavitals/data/relations.json', 'r') as f:
-#             all_relations = json.load(f)
-#
-#         train_val_split = int(0.66*len(all_relations))
-#         self.triplets = all_relations[:train_val_split] if dataset_type == 'train' else all_relations[train_val_split:]
-#
-#         with open('wikidatavitals/data/property_verbs.json', 'r') as f:
-#             self.verbs = json.load(f)
+class WikiDataVitalsSentences(Dataset):
+    def __init__(self, dataset_type, n_relations=50, seed=False):
+        assert dataset_type in ["train", "val"]
+        self.n_relations = n_relations
+
+        with open('wikidatavitals/data/relations.json', 'r') as f:
+            all_relations = json.load(f)  # loading all the relation triplets in wikidata-vitals
+
+        with open('wikidatavitals/data/relation_counts.json', 'r') as f:
+            relation_counts = json.load(f)  # loading the ordered relation counts
+
+        self.relation_ids = [c[0] for c in relation_counts[:self.n_relations]]
+
+        train_val_split = int(0.66 * len(all_relations))
+        triplets = all_relations[:train_val_split] if dataset_type == 'train' else all_relations[train_val_split:]
+        self.triplets = [t for t in triplets if t[1] in self.relation_ids]  # filtering the top 'n_relations'
+
+        with open('wikidatavitals/data/property_verbs.json', 'r') as f:
+            verbs = json.load(f)  # loading the property aliases then filtering the relations
+        self.verbs = {property_id: v for property_id, v in verbs.items() if property_id in self.relation_ids}
+
+        with open('wikidatavitals/data/entity_aliases.json', 'r') as f:
+            self.entity_aliases = json.load(f)  # loading the entity aliases
+
+        self.n_triplets = len(self.triplets)
+        self.n_entities = len(self.entity_aliases.keys())
+        self.n_sentences = self._compute_n_sentences()  # the total amount of possible sentences
+
+        if dataset_type == 'val' or seed:
+            np.random.seed(42)  # ensures reproducibility
+
+    def _compute_n_sentences(self):
+        total = 0
+        for e1, r, e2 in self.triplets:
+            total += len(self.entity_aliases[e1]) * len(self.verbs[r]) * len(self.entity_aliases[e2])
+
+        return total
+
+    def __len__(self):
+        return self.n_sentences
+
+    def __getitem__(self, item):
+        # outputs a random sentence from the dataset, this is NOT deterministic
+        selected_fact_idx = np.random.randint(low=0, high=self.n_triplets)
+        e1_id, r_id, e2_id = self.triplets[selected_fact_idx]
+        selected_e1_alias_idx = np.random.randint(low=0, high=len(self.entity_aliases[e1_id]))
+        selected_r_verb_idx = np.random.randint(low=0, high=len(self.verbs[r_id]))
+        selected_e2_alias_idx = np.random.randint(low=0, high=len(self.entity_aliases[e2_id]))
+
+        return {
+            'sentence': ' '.join([self.entity_aliases[e1_id][selected_e1_alias_idx],
+                                 self.verbs[r_id][selected_r_verb_idx],
+                                 self.entity_aliases[e2_id][selected_e2_alias_idx]]),
+            'label': (e1_id, r_id, e2_id)
+        }
+
+
+def save_encoded_WDV_sentences():
+    """
+    Feeds WikiDataVitalsSentences to BERT-base and saves a numpy .npy file for the train and val sets
+    """
+
+    device = torch.device('cuda:0')
+    bert_tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
+    bert = BertModel.from_pretrained("bert-base-uncased").cuda().eval()
+
+    if not os.path.exists('wikidatavitals/data/encoded/'):
+        os.makedirs('wikidatavitals/data/encoded/')
+
+    def preprocess_sentences_encoder(sentences, tokenizer):
+        encoded_dict = tokenizer(sentences, add_special_tokens=True, max_length=16, padding='max_length',
+                                 truncation=True, return_attention_mask=True,
+                                 return_tensors='pt')
+
+        return encoded_dict['input_ids'].to(device), encoded_dict['attention_mask'].to(device)
+
+    def save_dataset(dataset_type):
+        dataset = WikiDataVitalsSentences(dataset_type=dataset_type, seed=True)
+        total_sentences = dataset.n_triplets
+        loader = DataLoader(dataset, batch_size=64)
+        output = np.zeros((total_sentences, 768))
+        labels = []
+        current_output_idx = 0
+
+        with torch.no_grad():
+            for batch_idx, batch in enumerate(loader):
+                print('{}: batch {}/{}'.format(dataset_type, batch_idx + 1, total_sentences // 64 + 1))
+                # computing model output on the sentence batch
+                ids, masks = preprocess_sentences_encoder(batch['sentence'], bert_tokenizer)
+                batch_size = ids.shape[0]  # the shape of ids and masks is (batch, sentence_length_max=16)
+                model_hidden_states = bert(ids, attention_mask=masks).last_hidden_state  # shape (batch, 16, hidden=768)
+                model_output = model_hidden_states[:, 0, :]  # use the CLS output: shape (batch, 768)
+
+                # last batch slice handling
+                output_upper_slice = min(current_output_idx+batch_size, total_sentences)
+                model_upper_slice = batch_size if current_output_idx + batch_size < total_sentences \
+                    else total_sentences - current_output_idx
+
+                # saving the output to the final numpy array
+                output[current_output_idx:output_upper_slice] = model_output.cpu().numpy()[:model_upper_slice]
+                current_output_idx += batch_size
+
+                # saving the labels to the final list
+                labels.extend(batch['label'])
+
+                # the actual Dataset length is the total amount of POSSIBLE sentences, so we need to stop short
+                if current_output_idx >= total_sentences:
+                    break
+
+        np.save('wikidatavitals/data/encoded/' + dataset_type + '.npy', output)
+        with open('wikidatavitals/data/encoded/' + dataset_type + '_labels.json', 'w') as f:
+            json.dump(labels, f)  # no indent for space
+
+    print('Saving the training set ...')
+    save_dataset('train')
+    print('Saving the validation set ...')
+    save_dataset('val')
 
 
 if __name__ == '__main__':
@@ -150,6 +259,7 @@ if __name__ == '__main__':
     parser.add_argument('--n-verbs', type=int, default=5, required=False)
     parser.add_argument('--e', '--entities', action='store_true')
     parser.add_argument('--r', '--relations', action='store_true')
+    parser.add_argument('--enc', '--encode', action='store_true')
     args = parser.parse_args()
 
     if args.v:
@@ -164,3 +274,7 @@ if __name__ == '__main__':
     if args.r:
         print('Building the relation triplet list ...')
         save_relations()
+
+    if args.enc:
+        print('Encoding Wikidata-vitals sentences using BERT-base ...')
+        save_encoded_WDV_sentences()

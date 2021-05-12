@@ -12,3 +12,5 @@ nltk~=3.6.1
 scipy~=1.6.1
 torchkge~=0.16.25
 tensorflow-gpu==2.4.1
+torch~=1.7.1
+transformers~=4.5.0

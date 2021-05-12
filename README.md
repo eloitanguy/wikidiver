@@ -1,21 +1,34 @@
 # WikiDiver: Extracting knowledge from Wikipedia using Wikidata
 
-## V1: Comparing sentences
+The general objective is to extract facts of the form of Wikidata IDs (e1, relation, e2) from raw text.
 
-We compare a query sentence with a list of generated sentence of the form "entity 1" "verb" "entity 2"
+We refer to e1 and e2 as "entities", which can manifest in text in the form of "mentions" that refer to them.
+We define an entity's common mentions as "aliases". Similarly, we refer call relation mentions "verbs" (even though
+they are not necessarily verbs).
+
+## General setup
+
+#### Getting started
+
+First of all it is required to install the python modules with:
+
+    pip install -r requirements.txt
+
+In order to obtain all the dataset files, you can run the included code below or download the files from 
+[google drive](https://drive.google.com/drive/folders/1bHteMXBDD0UJ1r-t4aXfWx7Rkj0ag4JY?usp=sharing).
 
 #### Obtaining verbs
 
 We take the aliases of the wikidata-vitals relations from [TorchKGE](https://torchkge.readthedocs.io/en/latest/).
 
-The following command saves a dictionary to ```wikidata/data/property_verbs.json``` that maps a wikidata entity ID to a 
+The following command saves a dictionary to ```wikidatavitals/data/property_verbs.json``` that maps a wikidata entity ID to a 
 list of verbs that represent it:
 
     python wikidata/dataset.py --verbs
 
 The created file weighs 98.7 kB (with a maximum amount of verbs set to 5), the process takes around 7 minutes.
 
-We also save a list at ```wikidata/data/verb_idx2id.json``` mapping the index of a verb to its original property ID.
+We also save a list at ```wikidatavitals/data/verb_idx2id.json``` mapping the index of a verb to its original property ID.
 
 #### Comparing sentences
 
@@ -24,23 +37,32 @@ The code for this comparison is located in ```models/comparators.py```
 
 In order to compare two sentences together, we use the cosine similarity of their USE representations.
 
-#### Obtaining entities
+#### Obtaining entities and their aliases
 
 Thanks to TorchKGE, it is simple to access the id -> title mapping of wikidata-vitals entities.
-We save this dictionary in ```wikidata/data/entity_names.json``` quickly with:
+We save this dictionary in ```wikidatavitals/data/entity_names.json```with:
     
-    python wikidata/dataset.py --entities
+    python wikidatavitals/dataset.py --entities
 
-The file weighs 1.4 MB and the execution takes a few seconds.
+The file weighs 1.4 MB.
 
-#### Obtaining relations (benchmarking only, for now)
+This command also saves a dictionary mapping entity ids to the corresponding entity's aliases to 
+```wikidatavitals/data/entity_aliases.json```. This file weighs 4.0 MB.
+
+Obtaining the aliases requires prompting the Wikidata API, and in total takes around 7 hours.
+
+#### Obtaining relations
 
 Just like for entities, we save a dictionary id -> title for the relations, as well as the list of all the fact triplets
 in Wikidata-vitals using:
 
-  python wikidata/dataset.py --relations
+  python wikidatavitals/dataset.py --relations
 
 This execution takes about a minute, and the two files weigh 31 kB and 6.9 MB.
+
+## V1: Comparing sentences
+
+We compare a query sentence with a list of generated sentence of the form "entity 1" "verb" "entity 2"
 
 #### Extracting facts
 
@@ -62,7 +84,7 @@ In order to test v1 on a sentence "[sentence]", run the command:
 In order to assess the quality of the knowledge extraction, we put it to the test on the USA article: we consider a
 predicted fact correct if the fact is already present in Wikidata-vitals.
 
-The benchmark requires a setup (please also go through the relation setup first!):
+The benchmark requires a setup (please also go through the general setup first!):
 
     python benchmark.py --prepare
 
@@ -73,11 +95,23 @@ It can then be run using:
 This process takes 7 minutes with an RTX3090 (python allocates a lot of GPU memory but uses little GPU processing 
 power here).
 
-## V2 Ideas
+## V2 (WIP): train a classifier on constructed sentences
 
-- transform Wikidata into an annotated knowledge triplet dataset using Wikipedia sentence (Distant supervision). 
-  For this we need an entity recognition method.
-- compute BERT [CLS] outputs on all the annotated sentences
+Given a fact (e1, r, e2), we build a "sentence" using the entity aliases and relation verbs.
+The next step is to compute the BERT [CLS] output on all the built sentences.
+These vectors serve as input for a supervised classifier (WIP: XGB probably).
+
+#### Build the sentence dataset
+
+In order to save the classification dataset to ```wikidatavitals/data/encoded/```, run:
+
+    python wikidatavitals/dataset.py --encode
+
+This requires about 5 GB of RAM and 3 GB of VRAM, the process takes under 2min with an RTX 3090. 
+The produced files combined weigh 1.2 GB.
+
+#### V2 remaining ideas
+
 - train a model on the relation classification task
 
 ## V3 Ideas
