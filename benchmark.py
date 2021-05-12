@@ -7,6 +7,7 @@ from tqdm import tqdm
 from wikivitals.construction import save_usa_text
 import time
 from datetime import timedelta
+from config import V1_CONFIG
 
 
 def save_usa_entities():
@@ -75,7 +76,7 @@ def v1_usa_benchmark(v1_extractor):
     print('Processing the USA article with V1 ...')
     all_v1_outputs = []
     for paragraph in tqdm(usa_paragraphs):
-        v1_output = v1_extractor.extract_facts(paragraph)
+        v1_output = v1_extractor.extract_facts(paragraph, verbose=True)
         all_v1_outputs.extend(v1_output)
         predicted_facts_usa.extend([[o['e1_id'], o['property_id'], o['e2_id']] for o in v1_output])
 
@@ -89,7 +90,7 @@ def v1_usa_benchmark(v1_extractor):
         output_dict['is_correct'] = str(success_bool[output_idx])
 
     with open('usa_v1_benchamrk_facts_results.json', 'w') as f:
-        json.dump(all_v1_outputs, f, indent=4)
+        json.dump([V1_CONFIG] + all_v1_outputs, f, indent=4)
 
     n_correct = np.sum(success01)
     n_predictions = np.shape(success01)[0]

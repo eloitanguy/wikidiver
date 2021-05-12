@@ -130,18 +130,18 @@ def save_relations():
         json.dump(sorted_relations_list, f, indent=4)
 
 
-class WikiDataVitalsSentences(Dataset):
-    def __init__(self, dataset_type):
-        assert dataset_type in ["train", "val"]
-
-        with open('wikidatavitals/data/relations.json', 'r') as f:
-            all_relations = json.load(f)
-
-        train_val_split = int(0.66*len(all_relations))
-        self.triplets = all_relations[:train_val_split] if dataset_type == 'train' else all_relations[train_val_split:]
-
-        with open('wikidatavitals/data/property_verbs.json', 'r') as f:
-            self.verbs = json.load(f)
+# class WikiDataVitalsSentences(Dataset):
+#     def __init__(self, dataset_type):
+#         assert dataset_type in ["train", "val"]
+#
+#         with open('wikidatavitals/data/relations.json', 'r') as f:
+#             all_relations = json.load(f)
+#
+#         train_val_split = int(0.66*len(all_relations))
+#         self.triplets = all_relations[:train_val_split] if dataset_type == 'train' else all_relations[train_val_split:]
+#
+#         with open('wikidatavitals/data/property_verbs.json', 'r') as f:
+#             self.verbs = json.load(f)
 
 
 if __name__ == '__main__':

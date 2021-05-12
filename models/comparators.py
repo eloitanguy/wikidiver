@@ -31,23 +31,28 @@ class UniversalSentenceEncoderComparator(object):
         return cosine_similarity(v_query, v_candidates)
 
 
-def get_comparison_sentences(e1, e2, property_verbs):
+def get_comparison_sentences(e1, e2, property_verbs, double_check=True):
     res = []
     for verbs in property_verbs.values():
         res.extend([e1 + ' ' + verb + ' ' + e2 for verb in verbs])
+    if double_check:
+        res.append(' '.join([e1, e2]))
     return res
 
 
-def get_sliced_relation_mention(e1_dict, e2_dict, sentence):
+def get_sliced_relation_mention(e1_dict, e2_dict, sentence, bilateral_context=0):
     """
     :param e1_dict: {start_idx, end_idx, wikidatavitals id, name, mention}
     :param e2_dict: {start_idx, end_idx, wikidatavitals id, name, mention}
     :param sentence: text sentence mentioning e1 and e2
+    :param bilateral_context: number of words before e1 and after e2 to include in the slice
     :return: the same text sliced between e1 and e2 (inclusive)
     """
-    start_word_idx = e1_dict['start_idx']
-    end_word_idx = e2_dict['end_idx'] + 1  # the index is inclusive and Python is exclusive
-    res_list = sentence.split(' ')
-    res_list = res_list[start_word_idx:end_word_idx]
+    start_word_idx = max(e1_dict['start_idx'] - bilateral_context, 0)
+    text_list = sentence.split(' ')
+    text_length = len(text_list)
+    # the index is inclusive and Python is exclusive, hence the +1
+    end_word_idx = min(e2_dict['end_idx'] + 1 + bilateral_context, text_length - 1)
+    res_list = text_list[start_word_idx:end_word_idx]
     return ' '.join(res_list)
 
