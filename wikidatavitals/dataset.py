@@ -145,7 +145,12 @@ class WikiDataVitalsSentences(Dataset):
         with open('wikidatavitals/data/relation_counts.json', 'r') as f:
             relation_counts = json.load(f)  # loading the ordered relation counts
 
+        with open('wikidatavitals/data/relation_names.json', 'r') as f:
+            relation_names = json.load(f)
+
         self.relation_ids = [c[0] for c in relation_counts[:self.n_relations]]
+        self.relation_idx_to_name = [{'id': ID, 'name': relation_names[ID]} for ID in self.relation_ids]
+        self.relation_id_to_idx = {ID: idx for idx, ID in enumerate(self.relation_ids)}
 
         train_val_split = int(0.66 * len(all_relations))
         triplets = all_relations[:train_val_split] if dataset_type == 'train' else all_relations[train_val_split:]
@@ -185,9 +190,9 @@ class WikiDataVitalsSentences(Dataset):
 
         return {
             'sentence': ' '.join([self.entity_aliases[e1_id][selected_e1_alias_idx],
-                                 self.verbs[r_id][selected_r_verb_idx],
-                                 self.entity_aliases[e2_id][selected_e2_alias_idx]]),
-            'label': (e1_id, r_id, e2_id)
+                                  self.verbs[r_id][selected_r_verb_idx],
+                                  self.entity_aliases[e2_id][selected_e2_alias_idx]]),
+            'label': self.relation_id_to_idx[r_id]
         }
 
 
@@ -210,12 +215,18 @@ def save_encoded_WDV_sentences():
 
         return encoded_dict['input_ids'].to(device), encoded_dict['attention_mask'].to(device)
 
-    def save_dataset(dataset_type):
+    def save_dataset(dataset_type, save_relation_dictionary=True):
         dataset = WikiDataVitalsSentences(dataset_type=dataset_type, seed=True)
+        relation_idx_to_name = dataset.relation_idx_to_name
+
+        if save_relation_dictionary:
+            with open('wikidatavitals/data/encoded/relation_indices.json', 'w') as f:
+                json.dump(relation_idx_to_name, f, indent=4)
+
         total_sentences = dataset.n_triplets
         loader = DataLoader(dataset, batch_size=64)
         output = np.zeros((total_sentences, 768))
-        labels = []
+        labels = np.zeros(total_sentences)
         current_output_idx = 0
 
         with torch.no_grad():
@@ -228,24 +239,24 @@ def save_encoded_WDV_sentences():
                 model_output = model_hidden_states[:, 0, :]  # use the CLS output: shape (batch, 768)
 
                 # last batch slice handling
-                output_upper_slice = min(current_output_idx+batch_size, total_sentences)
+                output_upper_slice = min(current_output_idx + batch_size, total_sentences)
                 model_upper_slice = batch_size if current_output_idx + batch_size < total_sentences \
                     else total_sentences - current_output_idx
 
                 # saving the output to the final numpy array
                 output[current_output_idx:output_upper_slice] = model_output.cpu().numpy()[:model_upper_slice]
-                current_output_idx += batch_size
 
-                # saving the labels to the final list
-                labels.extend(batch['label'])
+                # saving the labels to the final numpy array
+                labels[current_output_idx:output_upper_slice] = batch['label'].numpy()[:model_upper_slice]
+
+                current_output_idx += batch_size
 
                 # the actual Dataset length is the total amount of POSSIBLE sentences, so we need to stop short
                 if current_output_idx >= total_sentences:
                     break
 
         np.save('wikidatavitals/data/encoded/' + dataset_type + '.npy', output)
-        with open('wikidatavitals/data/encoded/' + dataset_type + '_labels.json', 'w') as f:
-            json.dump(labels, f)  # no indent for space
+        np.save('wikidatavitals/data/encoded/' + dataset_type + '_labels.npy', labels)
 
     print('Saving the training set ...')
     save_dataset('train')
