@@ -95,11 +95,11 @@ It can then be run using:
 This process takes 7 minutes with an RTX3090 (python allocates a lot of GPU memory but uses little GPU processing 
 power here).
 
-## V2 (WIP): train a classifier on constructed sentences
+## V2: train a classifier on constructed sentences
 
 Given a fact (e1, r, e2), we build a "sentence" using the entity aliases and relation verbs.
 The next step is to compute the BERT [CLS] output on all the built sentences.
-These vectors serve as input for a supervised classifier (WIP: XGB probably).
+These vectors serve as input for a supervised classifier (XGBoost).
 
 #### Build the sentence dataset
 
@@ -110,9 +110,19 @@ In order to save the classification dataset to ```wikidatavitals/data/encoded/``
 This requires about 5 GB of RAM and 3 GB of VRAM, the process takes under 2min with an RTX 3090. 
 The produced files combined weigh 1.2 GB.
 
-#### V2 remaining ideas
+#### Train the XGB model
 
-- train a model on the relation classification task
+Adjust the configuration in the config file (the default value has good results on the train/val sets), then run:
+
+    python v2.py --train
+
+#### Benchmark V2 with the USA benchmark
+
+    python v2.py --benchmark
+
+## V2.5 Ideas
+
+Instead of training on built sentences, train with distant supervision using Wikipedia text.
 
 ## V3 Ideas
 

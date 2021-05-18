@@ -3,7 +3,7 @@ from models.comparators import UniversalSentenceEncoderComparator, get_compariso
 import json
 import numpy as np
 import argparse
-from benchmark import v1_usa_benchmark
+from benchmark import usa_benchmark
 from config import V1_CONFIG
 
 
@@ -120,4 +120,4 @@ if __name__ == '__main__':
         v1.extract_facts(args.sentence, verbose=True)
 
     if args.b:
-        v1_usa_benchmark(v1)
+        usa_benchmark(v1, V1_CONFIG)

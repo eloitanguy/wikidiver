@@ -66,19 +66,19 @@ class FactChecker(object):
         return triplet in self.facts
 
 
-def v1_usa_benchmark(v1_extractor):
+def usa_benchmark(extractor, config, output_name='usa_benchmark_results'):
     t0 = time.time()
     print('Starting USA benchmark ...')
     with open('wikivitals/data/benchmark/United States.json', 'r') as f:
         usa_paragraphs = json.load(f)
     predicted_facts_usa = []
 
-    print('Processing the USA article with V1 ...')
-    all_v1_outputs = []
+    print('Processing the USA article ...')
+    all_outputs = []
     for paragraph in tqdm(usa_paragraphs):
-        v1_output = v1_extractor.extract_facts(paragraph, verbose=True)
-        all_v1_outputs.extend(v1_output)
-        predicted_facts_usa.extend([[o['e1_id'], o['property_id'], o['e2_id']] for o in v1_output])
+        output = extractor.extract_facts(paragraph, verbose=False)
+        all_outputs.extend(output)
+        predicted_facts_usa.extend([[o['e1_id'], o['property_id'], o['e2_id']] for o in output])
 
     print("Fact checking ...")
     FC = FactChecker()
@@ -86,11 +86,11 @@ def v1_usa_benchmark(v1_extractor):
     success01 = np.array([int(b) for b in success_bool])
 
     print("Dumping fact-by-fact results ...")
-    for output_idx, output_dict in enumerate(all_v1_outputs):
+    for output_idx, output_dict in enumerate(all_outputs):
         output_dict['is_correct'] = str(success_bool[output_idx])
 
-    with open('usa_v1_benchmark_facts_results.json', 'w') as f:
-        json.dump([V1_CONFIG] + all_v1_outputs, f, indent=4)
+    with open(output_name + '.json', 'w') as f:
+        json.dump([config] + all_outputs, f, indent=4)
 
     n_correct = np.sum(success01)
     n_predictions = np.shape(success01)[0]

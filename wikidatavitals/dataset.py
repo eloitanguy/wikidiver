@@ -196,6 +196,14 @@ class WikiDataVitalsSentences(Dataset):
         }
 
 
+def preprocess_sentences_encoder(sentences, tokenizer, device):
+    encoded_dict = tokenizer(sentences, add_special_tokens=True, max_length=16, padding='max_length',
+                             truncation=True, return_attention_mask=True,
+                             return_tensors='pt')
+
+    return encoded_dict['input_ids'].to(device), encoded_dict['attention_mask'].to(device)
+
+
 def save_encoded_WDV_sentences():
     """
     Feeds WikiDataVitalsSentences to BERT-base and saves a numpy .npy file for the train and val sets
@@ -207,13 +215,6 @@ def save_encoded_WDV_sentences():
 
     if not os.path.exists('wikidatavitals/data/encoded/'):
         os.makedirs('wikidatavitals/data/encoded/')
-
-    def preprocess_sentences_encoder(sentences, tokenizer):
-        encoded_dict = tokenizer(sentences, add_special_tokens=True, max_length=16, padding='max_length',
-                                 truncation=True, return_attention_mask=True,
-                                 return_tensors='pt')
-
-        return encoded_dict['input_ids'].to(device), encoded_dict['attention_mask'].to(device)
 
     def save_dataset(dataset_type, save_relation_dictionary=True):
         dataset = WikiDataVitalsSentences(dataset_type=dataset_type)
@@ -233,7 +234,7 @@ def save_encoded_WDV_sentences():
             for batch_idx, batch in enumerate(loader):
                 print('{}: batch {}/{}'.format(dataset_type, batch_idx + 1, total_sentences // 64 + 1))
                 # computing model output on the sentence batch
-                ids, masks = preprocess_sentences_encoder(batch['sentence'], bert_tokenizer)
+                ids, masks = preprocess_sentences_encoder(batch['sentence'], bert_tokenizer, device)
                 batch_size = ids.shape[0]  # the shape of ids and masks is (batch, sentence_length_max=16)
                 model_hidden_states = bert(ids, attention_mask=masks).last_hidden_state  # shape (batch, 16, hidden=768)
                 model_output = model_hidden_states[:, 0, :]  # use the CLS output: shape (batch, 768)
