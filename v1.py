@@ -19,12 +19,13 @@ class V1(object):
     this case we assign a similarity of -1, conveying that the similarity method would not yield good results.
     """
     def __init__(self):
-        self.coreference_solver = CoreferenceResolver()
+        self.coreference_resolver = CoreferenceResolver()
         self.comparator = UniversalSentenceEncoderComparator()
         self.n_relations = V1_CONFIG['n_relations']
         self.threshold = V1_CONFIG['threshold']
         self.double_check = V1_CONFIG['double_check']
         self.bilateral_context = V1_CONFIG['bilateral_context']
+        self.max_entity_pair_distance = V1_CONFIG['max_entity_pair_distance']
 
         with open('wikidatavitals/data/relation_counts.json', 'r') as f:
             relation_counts = json.load(f)
@@ -42,11 +43,11 @@ class V1(object):
 
         self.verb_idx2id = [property_id for property_id in all_verb_idx2id if property_id in self.relation_ids]
 
-    def extract_facts(self, sentence, max_entity_pair_distance=3, verbose=False):
+    def extract_facts(self, sentence, verbose=False):
         facts = []
 
         # Step 1: NER
-        processed_text = self.coreference_solver(sentence)
+        processed_text = self.coreference_resolver(sentence)
         wikifier_results = wikifier(processed_text)
 
         # creating entity pairs: only pairs (e1, e2) in order
@@ -54,7 +55,7 @@ class V1(object):
         entity_pairs = []
         n_mentions = len(wikifier_results)
         for e1_idx in range(n_mentions):
-            for e2_idx in range(e1_idx + 1, min(e1_idx + max_entity_pair_distance, n_mentions)):
+            for e2_idx in range(e1_idx + 1, min(e1_idx + self.max_entity_pair_distance, n_mentions)):
                 entity_pairs.append({'e1': wikifier_results[e1_idx],
                                      'e2': wikifier_results[e2_idx]})
 

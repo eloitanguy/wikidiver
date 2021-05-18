@@ -9,6 +9,7 @@ import numpy as np
 from torch.utils.data import Dataset, DataLoader
 from transformers import BertTokenizer, BertModel
 import torch
+from random import Random
 
 
 def get_names(ID: str, number, client=None):
@@ -135,12 +136,14 @@ def save_relations():
 
 
 class WikiDataVitalsSentences(Dataset):
-    def __init__(self, dataset_type, n_relations=50, seed=False):
+    def __init__(self, dataset_type, n_relations=50):
         assert dataset_type in ["train", "val"]
+        np.random.seed(42)  # ensures reproducibility
         self.n_relations = n_relations
 
         with open('wikidatavitals/data/relations.json', 'r') as f:
             all_relations = json.load(f)  # loading all the relation triplets in wikidata-vitals
+        Random(42).shuffle(all_relations)  # shuffle relations in place with a set seed
 
         with open('wikidatavitals/data/relation_counts.json', 'r') as f:
             relation_counts = json.load(f)  # loading the ordered relation counts
@@ -166,9 +169,6 @@ class WikiDataVitalsSentences(Dataset):
         self.n_triplets = len(self.triplets)
         self.n_entities = len(self.entity_aliases.keys())
         self.n_sentences = self._compute_n_sentences()  # the total amount of possible sentences
-
-        if dataset_type == 'val' or seed:
-            np.random.seed(42)  # ensures reproducibility
 
     def _compute_n_sentences(self):
         total = 0
@@ -216,7 +216,7 @@ def save_encoded_WDV_sentences():
         return encoded_dict['input_ids'].to(device), encoded_dict['attention_mask'].to(device)
 
     def save_dataset(dataset_type, save_relation_dictionary=True):
-        dataset = WikiDataVitalsSentences(dataset_type=dataset_type, seed=True)
+        dataset = WikiDataVitalsSentences(dataset_type=dataset_type)
         relation_idx_to_name = dataset.relation_idx_to_name
 
         if save_relation_dictionary:
