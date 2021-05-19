@@ -132,3 +132,13 @@ Instead of training on built sentences, train with distant supervision using Wik
 
 - instead of using the BERT [CLS] output, encode every word pair using their attentions
 - classify each word pair into relations
+- V3.5: use the TransE pair result in the pipeline
+
+## More random ideas
+
+- in the benchmark, cluster the relations and give points for being in the right cluster
+- cluster the relations and build a classifier by cluster
+- don't try to extract a fact from two entities with there is no Wikipedia link between them
+- structured NER
+- TransE-aware fact extraction
+- graph-NN on the entity/relation tree for hierarchical thinking
