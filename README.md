@@ -24,7 +24,7 @@ We take the aliases of the wikidata-vitals relations from [TorchKGE](https://tor
 The following command saves a dictionary to ```wikidatavitals/data/property_verbs.json``` that maps a wikidata entity ID to a 
 list of verbs that represent it:
 
-    python wikidata/dataset.py --verbs
+    python dataset_setups.py --verbs
 
 The created file weighs 98.7 kB (with a maximum amount of verbs set to 5), the process takes around 7 minutes.
 
@@ -42,7 +42,7 @@ In order to compare two sentences together, we use the cosine similarity of thei
 Thanks to TorchKGE, it is simple to access the id -> title mapping of wikidata-vitals entities.
 We save this dictionary in ```wikidatavitals/data/entity_names.json```with:
     
-    python wikidatavitals/dataset.py --entities
+    python dataset_setups.py --entities
 
 The file weighs 1.4 MB.
 
@@ -56,7 +56,7 @@ Obtaining the aliases requires prompting the Wikidata API, and in total takes ar
 Just like for entities, we save a dictionary id -> title for the relations, as well as the list of all the fact triplets
 in Wikidata-vitals using:
 
-  python wikidatavitals/dataset.py --relations
+    python dataset_setups.py --relations
 
 This execution takes about a minute, and the two files weigh 31 kB and 6.9 MB.
 
@@ -101,11 +101,15 @@ Given a fact (e1, r, e2), we build a "sentence" using the entity aliases and rel
 The next step is to compute the BERT [CLS] output on all the built sentences.
 These vectors serve as input for a supervised classifier (XGBoost).
 
+In order to test v2 on a sentence "[sentence]", run the command:
+
+    python v2.py --sentence "[sentence]"
+
 #### Build the sentence dataset
 
 In order to save the classification dataset to ```wikidatavitals/data/encoded/```, run:
 
-    python wikidatavitals/dataset.py --encode
+    python dataset_setups.py --encode
 
 This requires about 5 GB of RAM and 3 GB of VRAM, the process takes under 2min with an RTX 3090. 
 The produced files combined weigh 1.2 GB.
