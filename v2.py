@@ -1,12 +1,12 @@
 from models.classifiers import XGBRelationClassifier
 from models.comparators import get_sliced_relation_mention
 import argparse
-from wikidatavitals.ner import wikifier, CoreferenceResolver
+from models.ner import wikifier, CoreferenceResolver
 from config import V2_CONFIG
 import json
 from transformers import BertTokenizer, BertModel
 import torch
-from wikidatavitals.dataset import preprocess_sentences_encoder
+from models.encoders import preprocess_sentences_encoder
 import numpy as np
 from benchmark import usa_benchmark
 
@@ -54,7 +54,6 @@ class V2(object):
 
         # creating entity pairs: only pairs (e1, e2) in order
         # with at most 'max_entity_pair_distance - 1' entities between them
-        entity_pairs = []
         n_mentions = len(wikifier_results)
 
         if n_mentions < 2 and verbose:

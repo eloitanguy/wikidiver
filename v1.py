@@ -1,4 +1,4 @@
-from wikidatavitals.ner import wikifier, CoreferenceResolver
+from models.ner import wikifier, CoreferenceResolver
 from models.comparators import UniversalSentenceEncoderComparator, get_comparison_sentences, get_sliced_relation_mention
 import json
 import numpy as np

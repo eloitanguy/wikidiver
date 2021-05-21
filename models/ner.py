@@ -2,7 +2,6 @@ import spacy
 import neuralcoref
 import urllib
 import json
-from copy import copy
 
 
 def character_idx_to_word_idx(text):

@@ -1,5 +1,5 @@
 import json
-from wikidatavitals.ner import wikifier, CoreferenceResolver
+from models.ner import wikifier, CoreferenceResolver
 import os
 import numpy as np
 import argparse
@@ -7,7 +7,6 @@ from tqdm import tqdm
 from wikivitals.construction import save_usa_text
 import time
 from datetime import timedelta
-from config import V1_CONFIG
 
 
 def save_usa_entities():
