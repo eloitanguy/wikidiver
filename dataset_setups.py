@@ -19,7 +19,7 @@ if __name__ == '__main__':
 
     if args.enc_wd:
         print('Encoding Wikidata-vitals sentences using BERT-base ...')
-        save_encoded_sentences(WikiDataVitalsSentences)
+        save_encoded_sentences(WikiDataVitalsSentences, 'wikidatavitals/data/encoded/')
 
     if args.v:
         print('Saving Wikidata verb information ...')

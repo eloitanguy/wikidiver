@@ -133,6 +133,13 @@ def save_relations():
 
 
 class WikiDataVitalsSentences(Dataset):
+    """
+    A torch (string) Dataset containing pseudo-sentences of the form <e1><r><e2> generated from Wikidata-vitals.\n
+    Each entry is a dictionary:\n
+    {\t'sentence': [a pseudo-sentence],
+    \t'label': [the idx of the relation]}
+    """
+
     def __init__(self, dataset_type, n_relations=50):
         assert dataset_type in ["train", "val"]
         np.random.seed(42)  # ensures reproducibility
@@ -191,3 +198,26 @@ class WikiDataVitalsSentences(Dataset):
                                   self.entity_aliases[e2_id][selected_e2_alias_idx]]),
             'label': self.relation_id_to_idx[r_id]
         }
+
+
+class FactNotFoundError(Exception):
+    """Raised when a FactFinder found no facts about the entity pair"""
+    pass
+
+
+class FactFinder(object):
+    def __init__(self):
+        with open('wikidatavitals/data/relations.json', 'r') as f:
+            self.relations = json.load(f)
+
+    def get_fact(self, e1_id, e2_id):
+        """
+        Given a pair of entity IDs, scans the wikidatavitals KB for a triplet (e1, r, e2).\n
+        If one or more triplets are found, will return the first relation ID that was found.\n
+        If no triplet are found, raises FactNotFoundError.
+        """
+        relation_subset = [(e1, r, e2) for (e1, r, e2) in self.relations if e1 == e1_id and e2 == e2_id]
+        if len(relation_subset) > 0:
+            return relation_subset[0]
+        else:
+            raise FactNotFoundError

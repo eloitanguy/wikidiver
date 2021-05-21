@@ -126,24 +126,40 @@ def clean_content_list(text):
 
 
 def process_raw_text(raw):
+    """
+    :param raw: raw text
+    :return: a list of cleaned paragraphs from the text
+    """
     text = clean_text(raw)
     paragraphs = [p for p in text.split('\n') if len(p) > 30 and '.' in p]  # filters out most headers and blank lines
     return paragraphs
 
 
 def get_article_text_by_name(name):
+    """
+    :param name: Wikipedia article name
+    :return: a list of cleaned paragraphs from the article text
+    """
     article = wikipedia.page(name)
     raw = article.content
     return process_raw_text(raw)
 
 
 def get_article_text_by_page_id(page_id):
+    """
+    :param page_id: Wikipedia article id
+    :return: a list of cleaned paragraphs from the article text
+    """
     article = wikipedia.page(pageid=page_id)
     raw = article.content
     return process_raw_text(raw)
 
 
 def get_page_id(name):
+    """
+    :param name: Wikipedia article name
+    :return: the corresponding Wikipedia page id
+    """
     if name[0] == ' ':  # common error caused by a space before the name
         name = name[1:]
     name = name.replace(' ', '%20').replace('\n', '')  # formatting for html query
@@ -153,27 +169,20 @@ def get_page_id(name):
     return page_id  # output first found page id (there should only be one)
 
 
-class ArticleRetriever(object):
-    def __init__(self, article_filename):
-        with open(article_filename, 'r') as f:
-            self.article_names = [line for line in f.readlines()]
-
-    def save_all_texts(self):
-        if not os.path.exists('wikivitals/data/article_texts/'):
-            os.makedirs('wikivitals/data/article_texts/')
-
-        for article_idx, name in enumerate(self.article_names):
-            page_id = get_page_id(name)
-            print('\n', name, page_id)
-            # We try to perform disambiguation by going by page ID, if that fails we resort to an imprecise search
-            try:
-                text = get_article_text_by_page_id(page_id)
-            except wikipedia.exceptions.PageError:
-                print('Disambiguation error on ', name)
-                text = get_article_text_by_name(name)
-
-            with open(os.path.join('wikivitals/data/article_texts/', name + '.json'), 'w') as f:
-                json.dump(text, f, indent=4)
+def get_article_text_by_name_with_disambiguation(name):
+    """
+    Tries to obtain the text of the right article by finding the corresponding article ID
+    :param name: Wikipedia article name
+    :return: a list of cleaned paragraphs from the article text
+    """
+    page_id = get_page_id(name)
+    # We try to perform disambiguation by going by page ID, if that fails we resort to an imprecise search
+    try:
+        text = get_article_text_by_page_id(page_id)
+    except wikipedia.exceptions.PageError:
+        print('Disambiguation error on ', name)
+        text = get_article_text_by_name(name)
+    return text
 
 
 def save_usa_text():
@@ -186,3 +195,18 @@ def save_usa_text():
     text = get_article_text_by_page_id(get_page_id(name))
     with open(os.path.join('wikivitals/data/benchmark/', name + '.json'), 'w') as f:
         json.dump(text, f, indent=4)
+
+
+class ArticleRetriever(object):
+    def __init__(self, article_filename):
+        with open(article_filename, 'r') as f:
+            self.article_names = [line for line in f.readlines()]
+
+    def save_all_texts(self):
+        if not os.path.exists('wikivitals/data/article_texts/'):
+            os.makedirs('wikivitals/data/article_texts/')
+
+        for article_idx, name in enumerate(self.article_names):
+            text = get_article_text_by_name_with_disambiguation(name)
+            with open(os.path.join('wikivitals/data/article_texts/', name + '.json'), 'w') as f:
+                json.dump(text, f, indent=4)

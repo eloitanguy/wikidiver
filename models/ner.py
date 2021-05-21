@@ -1,7 +1,10 @@
+from __future__ import unicode_literals, print_function
+
 import spacy
 import neuralcoref
 import urllib
 import json
+from spacy.lang.en import English
 
 
 def character_idx_to_word_idx(text):
@@ -51,10 +54,30 @@ class CoreferenceResolver(object):
         return "".join(tok_list)
 
 
+class SentenceSplitter(object):
+    """
+    Splits a text into sentences using SpaCy.
+    Code from https://github.com/explosion/spaCy/issues/93#issuecomment-138773719
+    """
+    def __init__(self):
+        self.nlp = English()
+        self.nlp.add_pipe(self.nlp.create_pipe('sentencizer'))
+
+    def __call__(self, text):
+        doc = self.nlp(text)
+        return [sent.string.strip() for sent in doc.sents]
+
+
 def wikifier(text, threshold=0.9, grouped=True):
     """
     Function that fetches entity linking results from wikifier.com API, includes code from:
-    https://towardsdatascience.com/from-text-to-knowledge-the-information-extraction-pipeline-b65e7e30273e
+    https://towardsdatascience.com/from-text-to-knowledge-the-information-extraction-pipeline-b65e7e30273e\n
+    :return: a list of detection dicts:
+        'start_idx': inclusive start index,
+        'end_idx':inclusive end index,
+        'id': entity Wikidata ID,
+        'name': a name for the entity,
+        'mention': the sentence slice relating to it
     """
 
     # Resolve text co-references
@@ -99,7 +122,12 @@ def get_grouped_ner_results(result_list):
     """
     Used for grouping the outputs of wikifier.
     :param result_list: a list of [idx, wikidatavitals id, name, mention] detections (one per detected word)
-    :return: a dictionary of detections: (inclusive indices) {start_idx, end_idx, wikidatavitals id, name, mention}
+    :return: a list of detection dicts:
+        'start_idx': inclusive start index,
+        'end_idx':inclusive end index,
+        'id': entity Wikidata ID,
+        'name': a name for the entity,
+        'mention': the sentence slice relating to it
     """
 
     if not result_list:

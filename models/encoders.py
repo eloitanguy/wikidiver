@@ -14,7 +14,7 @@ def preprocess_sentences_encoder(sentences, tokenizer, device):
     return encoded_dict['input_ids'].to(device), encoded_dict['attention_mask'].to(device)
 
 
-def save_encoded_sentences(torch_dataset):
+def save_encoded_sentences(torch_dataset, folder):
     """
     Feeds the sentences from the given Dataset to BERT-base and saves a numpy .npy file for the train and val sets
     """
@@ -23,19 +23,19 @@ def save_encoded_sentences(torch_dataset):
     bert_tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
     bert = BertModel.from_pretrained("bert-base-uncased").cuda().eval()
 
-    if not os.path.exists('wikidatavitals/data/encoded/'):
-        os.makedirs('wikidatavitals/data/encoded/')
+    if not os.path.exists(folder):
+        os.makedirs(folder)
 
     def save_dataset(dataset_type, save_relation_dictionary=True):
         dataset = torch_dataset(dataset_type=dataset_type)
         relation_idx_to_name = dataset.relation_idx_to_name
 
         if save_relation_dictionary:
-            with open('wikidatavitals/data/encoded/relation_indices.json', 'w') as f:
+            with open(os.path.join(folder, 'relation_indices.json'), 'w') as f:
                 json.dump(relation_idx_to_name, f, indent=4)
 
         total_sentences = dataset.n_triplets
-        loader = DataLoader(dataset, batch_size=64)
+        loader = DataLoader(dataset, batch_size=64, num_workers=8)
         output = np.zeros((total_sentences, 768))
         labels = np.zeros(total_sentences)
         current_output_idx = 0
@@ -66,8 +66,8 @@ def save_encoded_sentences(torch_dataset):
                 if current_output_idx >= total_sentences:
                     break
 
-        np.save('wikidatavitals/data/encoded/' + dataset_type + '.npy', output)
-        np.save('wikidatavitals/data/encoded/' + dataset_type + '_labels.npy', labels)
+        np.save(os.path.join(folder, dataset_type + '.npy'), output)
+        np.save(os.path.join(folder, dataset_type + '_labels.npy'), labels)
 
     print('Saving the training set ...')
     save_dataset('train')
