@@ -1,5 +1,5 @@
 import json
-from wikivitals.construction import get_article_text_by_name_with_disambiguation
+import os
 from torch.utils.data import Dataset
 import numpy as np
 from random import Random
@@ -15,10 +15,6 @@ class FoundFact(Exception):
         self.relation_id = relation_id
 
 
-class NoFactInArticleError(Exception):
-    """ Raised if the parser found no facts in the current article when calling WikipediaSentences.__getitem__()"""
-
-
 class WikipediaSentences(Dataset):
     """
     A torch (string) Dataset containing sentences from WikiVitals articles.\n
@@ -28,7 +24,7 @@ class WikipediaSentences(Dataset):
     The train set uses the first 66% of each article paragraphs and the val set uses the rest.
     """
     def __init__(self, dataset_type, n_sentences_total=200000, n_relations=50, max_entity_pair_distance=4,
-                 bilateral_context=4, max_sentence_length=15):
+                 bilateral_context=4, max_sentence_length=32):
         assert dataset_type in ["train", "val"]
         self.dataset_type = dataset_type
         np.random.seed(42)
@@ -43,7 +39,11 @@ class WikipediaSentences(Dataset):
         with open('wikidatavitals/data/relation_counts.json', 'r') as f:
             relation_counts = json.load(f)  # loading the ordered relation counts
 
+        with open('wikidatavitals/data/relation_names.json', 'r') as f:
+            relation_names = json.load(f)
+
         self.relation_ids = [c[0] for c in relation_counts[:self.n_relations]]
+        self.relation_idx_to_name = [{'id': ID, 'name': relation_names[ID]} for ID in self.relation_ids]
         self.relation_id_to_idx = {ID: idx for idx, ID in enumerate(self.relation_ids)}
 
         # Keeping in memory the article titles, we don't include the USA article which is for benchmarks
@@ -59,10 +59,17 @@ class WikipediaSentences(Dataset):
     def __len(self):
         return self.n_sentences  # Artificially set to the wanted number of sentences
 
-    def __getitem__(self, item):
+    def _get_random_annotated_sentence(self):
         # Choosing an article paragraph at random, applying coreference resolution and sentence splitting
         article_idx = self.RNG.randint(0, self.n_articles - 1)
-        raw_article_paragraphs = get_article_text_by_name_with_disambiguation(self.article_names[article_idx])
+        article_name = self.article_names[article_idx]
+
+        try:  # try loading the chosen text
+            with open(os.path.join('wikivitals/data/article_texts/', article_name + '.json'), 'r') as f:
+                raw_article_paragraphs = json.load(f)
+        except FileNotFoundError:  # in very rare occasions the article download may have failed
+            return self._get_random_annotated_sentence()
+
         self.RNG.shuffle(raw_article_paragraphs)
 
         # The ('sentence excerpt', label) output is obtained from the first Wikidata fact that we find
@@ -74,9 +81,9 @@ class WikipediaSentences(Dataset):
 
                 # Selecting sentences based on the train/val split (we split the paragraphs)
                 if self.dataset_type == 'train':
-                    selected_sentences = sentences[:int(0.66*len(sentences))]
+                    selected_sentences = sentences[:int(0.66 * len(sentences))]
                 else:  # val set
-                    selected_sentences = sentences[int(0.66*len(sentences)):]
+                    selected_sentences = sentences[int(0.66 * len(sentences)):]
 
                 for sent in selected_sentences:  # going through the sentences
                     wikifier_results = wikifier(sent)
@@ -98,7 +105,11 @@ class WikipediaSentences(Dataset):
                                 except FactNotFoundError:  # No fact in this entity pair, carry on
                                     pass
 
-            raise NoFactInArticleError  # If we are this far, we have found no fact in the entire article...
+            # If we are this far, we have found no fact in the entire article... so we try another
+            return self._get_random_annotated_sentence()
 
         except FoundFact as ff:
             return {'sentence': ff.sentence, 'label': self.relation_id_to_idx[ff.relation_id]}
+
+    def __getitem__(self, item):
+        return self._get_random_annotated_sentence()

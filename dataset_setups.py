@@ -1,9 +1,9 @@
-from wikidatavitals.dataset import WikiDataVitalsSentences
 from models.encoders import save_encoded_sentences
 from wikidatavitals.dataset import save_relations, save_verb_idx_to_relation_list, save_property_verbs_dictionary, \
-    save_entity_dictionary
+    save_entity_dictionary, WikiDataVitalsSentences
 import argparse
 from wikivitals.construction import save_all_texts
+from wikivitals.dataset import WikipediaSentences
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -17,6 +17,8 @@ if __name__ == '__main__':
                         help='Save relation info: a fact triplet list, an id-to-name dict and an ordered count list')
     parser.add_argument('--sw', '--save-wikivitals', action='store_true',
                         help='Save all wikivitals article texts')
+    parser.add_argument('--enc-wv', '--encode-wikivitals', action='store_true',
+                        help='Encoding Wikivitals sentences using BERT-base')
     args = parser.parse_args()
 
     if args.enc_wd:
@@ -39,3 +41,7 @@ if __name__ == '__main__':
     if args.sw:
         print('Saving all wikivitals article texts ...')
         save_all_texts()
+
+    if args.enc_wv:
+        print('Encoding Wikivitals sentences using BERT-base ...')
+        save_encoded_sentences(WikipediaSentences, 'wikivitals/data/encoded/')

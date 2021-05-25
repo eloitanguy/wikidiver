@@ -4,12 +4,12 @@ import torch
 import numpy as np
 import json
 import os
+from tqdm import tqdm
 
 
 def preprocess_sentences_encoder(sentences, tokenizer, device):
-    encoded_dict = tokenizer(sentences, add_special_tokens=True, max_length=16, padding='max_length',
-                             truncation=True, return_attention_mask=True,
-                             return_tensors='pt')
+    encoded_dict = tokenizer(sentences, add_special_tokens=True, max_length=32, padding='max_length',
+                             truncation=True, return_attention_mask=True, return_tensors='pt')
 
     return encoded_dict['input_ids'].to(device), encoded_dict['attention_mask'].to(device)
 
@@ -34,15 +34,14 @@ def save_encoded_sentences(torch_dataset, folder):
             with open(os.path.join(folder, 'relation_indices.json'), 'w') as f:
                 json.dump(relation_idx_to_name, f, indent=4)
 
-        total_sentences = dataset.n_triplets
-        loader = DataLoader(dataset, batch_size=64, num_workers=8)
+        total_sentences = len(dataset)
+        loader = DataLoader(dataset, batch_size=64, num_workers=32)
         output = np.zeros((total_sentences, 768))
         labels = np.zeros(total_sentences)
         current_output_idx = 0
 
         with torch.no_grad():
-            for batch_idx, batch in enumerate(loader):
-                print('{}: batch {}/{}'.format(dataset_type, batch_idx + 1, total_sentences // 64 + 1))
+            for batch in tqdm(loader):
                 # computing model output on the sentence batch
                 ids, masks = preprocess_sentences_encoder(batch['sentence'], bert_tokenizer, device)
                 batch_size = ids.shape[0]  # the shape of ids and masks is (batch, sentence_length_max=16)
@@ -61,10 +60,6 @@ def save_encoded_sentences(torch_dataset, folder):
                 labels[current_output_idx:output_upper_slice] = batch['label'].numpy()[:model_upper_slice]
 
                 current_output_idx += batch_size
-
-                # the actual Dataset length is the total amount of POSSIBLE sentences, so we need to stop short
-                if current_output_idx >= total_sentences:
-                    break
 
         np.save(os.path.join(folder, dataset_type + '.npy'), output)
         np.save(os.path.join(folder, dataset_type + '_labels.npy'), labels)

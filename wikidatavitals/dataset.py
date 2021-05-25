@@ -172,17 +172,9 @@ class WikiDataVitalsSentences(Dataset):
 
         self.n_triplets = len(self.triplets)
         self.n_entities = len(self.entity_aliases.keys())
-        self.n_sentences = self._compute_n_sentences()  # the total amount of possible sentences
-
-    def _compute_n_sentences(self):
-        total = 0
-        for e1, r, e2 in self.triplets:
-            total += len(self.entity_aliases[e1]) * len(self.verbs[r]) * len(self.entity_aliases[e2])
-
-        return total
 
     def __len__(self):
-        return self.n_sentences
+        return self.n_triplets
 
     def __getitem__(self, item):
         # outputs a random sentence from the dataset, this is NOT deterministic
