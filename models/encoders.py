@@ -36,12 +36,14 @@ def save_encoded_sentences(torch_dataset, folder):
 
         total_sentences = len(dataset)
         loader = DataLoader(dataset, batch_size=64, num_workers=32)
+        n_batches = len(loader)
         output = np.zeros((total_sentences, 768))
         labels = np.zeros(total_sentences)
         current_output_idx = 0
 
         with torch.no_grad():
-            for batch in tqdm(loader):
+            for batch_idx, batch in enumerate(loader):
+                print('Batch {}/{}'.format(batch_idx, n_batches))
                 # computing model output on the sentence batch
                 ids, masks = preprocess_sentences_encoder(batch['sentence'], bert_tokenizer, device)
                 batch_size = ids.shape[0]  # the shape of ids and masks is (batch, sentence_length_max=16)
