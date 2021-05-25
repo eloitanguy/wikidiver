@@ -5,6 +5,7 @@ import wikipedia
 import os
 from bs4 import BeautifulSoup
 import json
+import multiprocessing as mp
 
 
 def get_categories(_url):
@@ -197,16 +198,23 @@ def save_usa_text():
         json.dump(text, f, indent=4)
 
 
-class ArticleRetriever(object):
-    def __init__(self, article_filename):
-        with open(article_filename, 'r') as f:
-            self.article_names = [line for line in f.readlines()]
+def save_article(name):
+    try:
+        text = get_article_text_by_name_with_disambiguation(name)
+        with open(os.path.join('wikivitals/data/article_texts/', name + '.json'), 'w') as f:
+            json.dump(text, f, indent=4)
+    except:
+        pass
 
-    def save_all_texts(self):
-        if not os.path.exists('wikivitals/data/article_texts/'):
-            os.makedirs('wikivitals/data/article_texts/')
 
-        for article_idx, name in enumerate(self.article_names):
-            text = get_article_text_by_name_with_disambiguation(name)
-            with open(os.path.join('wikivitals/data/article_texts/', name + '.json'), 'w') as f:
-                json.dump(text, f, indent=4)
+def save_all_texts():
+    """
+    Saves all wikidata-vitals articles to wikivitals/data/article_texts/
+    """
+    if not os.path.exists('wikivitals/data/article_texts/'):
+        os.makedirs('wikivitals/data/article_texts/')
+    pool = mp.Pool(mp.cpu_count())
+    with open('wikivitals/data/en-articles.txt', 'r') as f:
+        article_names = [line for line in f.readlines()]
+    pool.map(save_article, article_names)
+    pool.close()

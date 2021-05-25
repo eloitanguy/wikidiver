@@ -89,7 +89,7 @@ class WikipediaSentences(Dataset):
                             sliced_sentence = get_sliced_relation_mention(e1_dict, e2_dict, sent,
                                                                           bilateral_context=self.bilateral_context)
 
-                            if len(sliced_sentence.split(' ') <= self.max_sentence_length):
+                            if len(sliced_sentence.split(' ')) <= self.max_sentence_length:
                                 try:
                                     _, r, _ = self.fact_finder.get_fact(e1_dict['id'], e2_dict['id'])
                                     if r in self.relation_ids:  # checking if the relation is in the top relations
