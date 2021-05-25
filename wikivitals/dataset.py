@@ -56,7 +56,7 @@ class WikipediaSentences(Dataset):
         self.splitter = SentenceSplitter()
         self.fact_finder = FactFinder()
 
-    def __len(self):
+    def __len__(self):
         return self.n_sentences  # Artificially set to the wanted number of sentences
 
     def _get_random_annotated_sentence(self):

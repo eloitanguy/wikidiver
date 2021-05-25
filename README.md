@@ -10,6 +10,9 @@ they are not necessarily verbs).
 
 #### Getting started
 
+Preliminary note: in order to get spacy and neuralcoref working together, we recommend working in a new conda env with
+python 3.7.
+
 First of all it is required to install the python modules with:
 
     pip install -r requirements.txt
