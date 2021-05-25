@@ -8,13 +8,6 @@ from models.comparators import get_sliced_relation_mention
 from wikidatavitals.dataset import FactFinder, FactNotFoundError
 
 
-class FoundFact(Exception):
-    """ A helper exception for breaking out of the loops that search for a wikidata fact in a paragraph"""
-    def __init__(self, sentence, relation_id,):
-        self.sentence = sentence
-        self.relation_id = relation_id
-
-
 class WikipediaSentences(Dataset):
     """
     A torch (string) Dataset containing sentences from WikiVitals articles.\n
@@ -73,43 +66,39 @@ class WikipediaSentences(Dataset):
         self.RNG.shuffle(raw_article_paragraphs)
 
         # The ('sentence excerpt', label) output is obtained from the first Wikidata fact that we find
-        try:  # Trying to raise a FactFound error which gives us the fact information
-            for raw_paragraph in raw_article_paragraphs:  # going through the shuffled paragraphs
-                paragraph = self.coref(raw_paragraph)
-                sentences = self.splitter(paragraph)
-                self.RNG.shuffle(sentences)
+        for raw_paragraph in raw_article_paragraphs:  # going through the shuffled paragraphs
+            paragraph = self.coref(raw_paragraph)
+            sentences = self.splitter(paragraph)
+            self.RNG.shuffle(sentences)
 
-                # Selecting sentences based on the train/val split (we split the paragraphs)
-                if self.dataset_type == 'train':
-                    selected_sentences = sentences[:int(0.66 * len(sentences))]
-                else:  # val set
-                    selected_sentences = sentences[int(0.66 * len(sentences)):]
+            # Selecting sentences based on the train/val split (we split the paragraphs)
+            if self.dataset_type == 'train':
+                selected_sentences = sentences[:int(0.66 * len(sentences))]
+            else:  # val set
+                selected_sentences = sentences[int(0.66 * len(sentences)):]
 
-                for sent in selected_sentences:  # going through the sentences
-                    wikifier_results = wikifier(sent)
-                    n_mentions = len(wikifier_results)
+            for sent in selected_sentences:  # going through the sentences
+                wikifier_results = wikifier(sent)
+                n_mentions = len(wikifier_results)
 
-                    # Trying entity pair possibilities from the sentence
-                    for e1_idx in range(n_mentions):
-                        for e2_idx in range(e1_idx + 1, min(e1_idx + self.max_entity_pair_distance, n_mentions)):
-                            e1_dict, e2_dict = wikifier_results[e1_idx], wikifier_results[e2_idx]
-                            sliced_sentence = get_sliced_relation_mention(e1_dict, e2_dict, sent,
-                                                                          bilateral_context=self.bilateral_context)
+                # Trying entity pair possibilities from the sentence
+                for e1_idx in range(n_mentions):
+                    for e2_idx in range(e1_idx + 1, min(e1_idx + self.max_entity_pair_distance, n_mentions)):
+                        e1_dict, e2_dict = wikifier_results[e1_idx], wikifier_results[e2_idx]
+                        sliced_sentence = get_sliced_relation_mention(e1_dict, e2_dict, sent,
+                                                                      bilateral_context=self.bilateral_context)
 
-                            if len(sliced_sentence.split(' ')) <= self.max_sentence_length:
-                                try:
-                                    _, r, _ = self.fact_finder.get_fact(e1_dict['id'], e2_dict['id'])
-                                    if r in self.relation_ids:  # checking if the relation is in the top relations
-                                        raise FoundFact(sliced_sentence, r)  # Found a fact! return it
-                                    pass
-                                except FactNotFoundError:  # No fact in this entity pair, carry on
-                                    pass
+                        if len(sliced_sentence.split(' ')) <= self.max_sentence_length:
+                            try:
+                                _, r, _ = self.fact_finder.get_fact(e1_dict['id'], e2_dict['id'])
+                                if r in self.relation_ids:  # checking if the relation is in the top relations
+                                    return {'sentence': sliced_sentence, 'label': r}
+                                pass
+                            except FactNotFoundError:  # No fact in this entity pair, carry on
+                                pass
 
-            # If we are this far, we have found no fact in the entire article... so we try another
-            return self._get_random_annotated_sentence()
-
-        except FoundFact as ff:
-            return {'sentence': ff.sentence, 'label': self.relation_id_to_idx[ff.relation_id]}
+        # If we are this far, we have found no fact in the entire article... so we try another
+        return self._get_random_annotated_sentence()
 
     def __getitem__(self, item):
         return self._get_random_annotated_sentence()
