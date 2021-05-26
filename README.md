@@ -127,9 +127,15 @@ Adjust the configuration in the config file (the default value has good results 
 
     python v2.py --benchmark
 
-## V2.5 Ideas
+## V2.5 (WIP)
 
-Instead of training on built sentences, train with distant supervision using Wikipedia text.
+#### Saving the article texts
+
+    python datasets_setups.py --save-wikivitals
+
+#### Preparing an annotated text dataset
+
+    python dataset_setups.py --annotate-wikivitals
 
 ## V3 Ideas
 

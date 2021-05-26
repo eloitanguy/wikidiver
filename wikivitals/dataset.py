@@ -125,8 +125,7 @@ def save_wikipedia_fact_dataset(folder):
             with open(os.path.join(folder, 'relation_indices.json'), 'w') as f:
                 json.dump(relation_idx_to_name, f, indent=4)
 
-        # total_sentences = len(dataset)
-        total_sentences = 17
+        total_sentences = len(dataset)
         workers = mp.cpu_count()
         pool = mp.Pool(workers)
         sentences = []
