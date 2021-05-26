@@ -1,14 +1,15 @@
 import json
 import os
-from torch.utils.data import Dataset
-import numpy as np
-from random import Random
+import random
 from models.ner import CoreferenceResolver, SentenceSplitter, wikifier
 from models.comparators import get_sliced_relation_mention
 from wikidatavitals.dataset import FactFinder, FactNotFoundError
+import numpy as np
+import multiprocessing as mp
+import tqdm
 
 
-class WikipediaSentences(Dataset):
+class WikipediaSentences(object):
     """
     A torch (string) Dataset containing sentences from WikiVitals articles.\n
     Each entry is a dictionary:\n
@@ -20,8 +21,6 @@ class WikipediaSentences(Dataset):
                  bilateral_context=4, max_sentence_length=32):
         assert dataset_type in ["train", "val"]
         self.dataset_type = dataset_type
-        np.random.seed(42)
-        self.RNG = Random(42)
         self.max_entity_pair_distance = max_entity_pair_distance
         self.bilateral_context = bilateral_context
         self.max_sentence_length = max_sentence_length
@@ -52,33 +51,38 @@ class WikipediaSentences(Dataset):
     def __len__(self):
         return self.n_sentences  # Artificially set to the wanted number of sentences
 
-    def _get_random_annotated_sentence(self):
+    def get_random_annotated_sentence(self):
+        random.seed()  # seeds the RNG based on system time: parallelization-friendly
         # Choosing an article paragraph at random, applying coreference resolution and sentence splitting
-        article_idx = self.RNG.randint(0, self.n_articles - 1)
+        article_idx = random.randint(0, self.n_articles - 1)
         article_name = self.article_names[article_idx]
 
         try:  # try loading the chosen text
             with open(os.path.join('wikivitals/data/article_texts/', article_name + '.json'), 'r') as f:
                 raw_article_paragraphs = json.load(f)
         except FileNotFoundError:  # in very rare occasions the article download may have failed
-            return self._get_random_annotated_sentence()
+            return self.get_random_annotated_sentence()
 
-        self.RNG.shuffle(raw_article_paragraphs)
+        random.shuffle(raw_article_paragraphs)
 
         # The ('sentence excerpt', label) output is obtained from the first Wikidata fact that we find
         for raw_paragraph in raw_article_paragraphs:  # going through the shuffled paragraphs
             paragraph = self.coref(raw_paragraph)
             sentences = self.splitter(paragraph)
-            self.RNG.shuffle(sentences)
 
             # Selecting sentences based on the train/val split (we split the paragraphs)
             if self.dataset_type == 'train':
                 selected_sentences = sentences[:int(0.66 * len(sentences))]
             else:  # val set
                 selected_sentences = sentences[int(0.66 * len(sentences)):]
+            random.shuffle(sentences)  # shuffling afterwards to ensure that the sets are disjoint
 
             for sent in selected_sentences:  # going through the sentences
-                wikifier_results = wikifier(sent)
+                try:
+                    wikifier_results = wikifier(sent)
+                except KeyError:  # sometimes the wikifier request will not give the wikidata IDs -> skip the sentence
+                    continue
+
                 n_mentions = len(wikifier_results)
 
                 # Trying entity pair possibilities from the sentence
@@ -92,13 +96,65 @@ class WikipediaSentences(Dataset):
                             try:
                                 _, r, _ = self.fact_finder.get_fact(e1_dict['id'], e2_dict['id'])
                                 if r in self.relation_ids:  # checking if the relation is in the top relations
-                                    return {'sentence': sliced_sentence, 'label': r}
+                                    return {'sentence': sliced_sentence, 'label': self.relation_id_to_idx[r]}
                                 pass
                             except FactNotFoundError:  # No fact in this entity pair, carry on
                                 pass
 
         # If we are this far, we have found no fact in the entire article... so we try another
-        return self._get_random_annotated_sentence()
+        return self.get_random_annotated_sentence()
 
-    def __getitem__(self, item):
-        return self._get_random_annotated_sentence()
+    def placeholder_sentence_extractor(self, _):  # for multiprocessing we NEED an argument for the function ...
+        return self.get_random_annotated_sentence()
+
+
+def save_wikipedia_fact_dataset(folder):
+    """
+    Saves a Wikipedia Sentences dataset with (string) sentences and (int) labels.
+    """
+
+    if not os.path.exists(folder):
+        os.makedirs(folder)
+
+    def save_dataset(dataset_type, save_relation_dictionary=True):
+        dataset = WikipediaSentences(dataset_type=dataset_type)
+
+        relation_idx_to_name = dataset.relation_idx_to_name
+
+        if save_relation_dictionary:
+            with open(os.path.join(folder, 'relation_indices.json'), 'w') as f:
+                json.dump(relation_idx_to_name, f, indent=4)
+
+        # total_sentences = len(dataset)
+        total_sentences = 17
+        workers = mp.cpu_count()
+        pool = mp.Pool(workers)
+        sentences = []
+        labels = np.zeros(total_sentences)
+        current_output_idx = 0
+
+        for iteration in tqdm.trange(total_sentences // workers + 1):
+            dataset_item_list = pool.map(dataset.placeholder_sentence_extractor, range(workers))
+            batch = {
+                'sentence': [item['sentence'] for item in dataset_item_list],
+                'label': np.array([item['label'] for item in dataset_item_list])
+            }
+            batch_size = len(batch['sentence'])
+            upper_slice_exclusive = min(current_output_idx + batch_size, total_sentences)  # avoid going OOB
+            labels[current_output_idx:upper_slice_exclusive] = batch['label']
+            sentences.extend(batch['sentence'])
+
+            if iteration % 10 == 0:  # checkpointing
+                with open(os.path.join(folder, dataset_type + '_sentences.json'), 'w') as f:
+                    json.dump(sentences, f)  # will be massive so no indent
+                np.save(os.path.join(folder, dataset_type + '_labels.npy'), labels)
+
+        pool.close()
+        with open(os.path.join(folder, dataset_type + '_sentences.json'), 'w') as f:
+            json.dump(sentences, f)  # will be massive so no indent
+        np.save(os.path.join(folder, dataset_type + '_labels.npy'), labels)
+
+    print('Saving the training set ...')
+    save_dataset('train')
+    print('Saving the validation set ...')
+    save_dataset('val')

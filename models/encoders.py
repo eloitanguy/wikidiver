@@ -4,7 +4,6 @@ import torch
 import numpy as np
 import json
 import os
-from tqdm import tqdm
 
 
 def preprocess_sentences_encoder(sentences, tokenizer, device):
@@ -14,9 +13,33 @@ def preprocess_sentences_encoder(sentences, tokenizer, device):
     return encoded_dict['input_ids'].to(device), encoded_dict['attention_mask'].to(device)
 
 
+def handle_batch(batch, bert, bert_tokenizer, device, current_output_idx, total_sentences, output, labels):
+    # computing model output on the sentence batch
+    ids, masks = preprocess_sentences_encoder(batch['sentence'], bert_tokenizer, device)
+    batch_size = ids.shape[0]  # the shape of ids and masks is (batch, sentence_length_max=16)
+    model_hidden_states = bert(ids, attention_mask=masks).last_hidden_state  # shape (batch, 16, hidden=768)
+    model_output = model_hidden_states[:, 0, :]  # use the CLS output: shape (batch, 768)
+
+    # last batch slice handling
+    output_upper_slice = min(current_output_idx + batch_size, total_sentences)
+    model_upper_slice = batch_size if current_output_idx + batch_size < total_sentences \
+        else total_sentences - current_output_idx
+
+    # saving the output to the final numpy array
+    output[current_output_idx:output_upper_slice] = model_output.cpu().numpy()[:model_upper_slice]
+
+    # saving the labels to the final numpy array
+    labels[current_output_idx:output_upper_slice] = batch['label'].numpy()[:model_upper_slice]
+
+    current_output_idx += batch_size
+
+    return output, labels, current_output_idx
+
+
 def save_encoded_sentences(torch_dataset, folder):
     """
-    Feeds the sentences from the given Dataset to BERT-base and saves a numpy .npy file for the train and val sets
+    Feeds the sentences from the given Dataset to BERT-base and saves a numpy .npy file for the train and val sets.
+    Uses pytorch datasets and data loaders.
     """
 
     device = torch.device('cuda:0')
@@ -35,7 +58,7 @@ def save_encoded_sentences(torch_dataset, folder):
                 json.dump(relation_idx_to_name, f, indent=4)
 
         total_sentences = len(dataset)
-        loader = DataLoader(dataset, batch_size=64, num_workers=32)
+        loader = DataLoader(dataset, batch_size=32, num_workers=32)
         n_batches = len(loader)
         output = np.zeros((total_sentences, 768))
         labels = np.zeros(total_sentences)
@@ -44,24 +67,8 @@ def save_encoded_sentences(torch_dataset, folder):
         with torch.no_grad():
             for batch_idx, batch in enumerate(loader):
                 print('Batch {}/{}'.format(batch_idx, n_batches))
-                # computing model output on the sentence batch
-                ids, masks = preprocess_sentences_encoder(batch['sentence'], bert_tokenizer, device)
-                batch_size = ids.shape[0]  # the shape of ids and masks is (batch, sentence_length_max=16)
-                model_hidden_states = bert(ids, attention_mask=masks).last_hidden_state  # shape (batch, 16, hidden=768)
-                model_output = model_hidden_states[:, 0, :]  # use the CLS output: shape (batch, 768)
-
-                # last batch slice handling
-                output_upper_slice = min(current_output_idx + batch_size, total_sentences)
-                model_upper_slice = batch_size if current_output_idx + batch_size < total_sentences \
-                    else total_sentences - current_output_idx
-
-                # saving the output to the final numpy array
-                output[current_output_idx:output_upper_slice] = model_output.cpu().numpy()[:model_upper_slice]
-
-                # saving the labels to the final numpy array
-                labels[current_output_idx:output_upper_slice] = batch['label'].numpy()[:model_upper_slice]
-
-                current_output_idx += batch_size
+                output, labels, current_output_idx = handle_batch(batch, bert, bert_tokenizer, device,
+                                                                  current_output_idx, total_sentences, output, labels)
 
         np.save(os.path.join(folder, dataset_type + '.npy'), output)
         np.save(os.path.join(folder, dataset_type + '_labels.npy'), labels)
