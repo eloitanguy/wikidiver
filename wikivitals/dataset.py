@@ -19,6 +19,7 @@ class WikipediaSentences(object):
     \t'label': [the idx of the relation]}\n
     The train set uses the first 66% of each article paragraphs and the val set uses the rest.
     """
+
     def __init__(self, dataset_type, n_sentences_total=200000, n_relations=50, max_entity_pair_distance=4,
                  bilateral_context=4, max_sentence_length=32):
         assert dataset_type in ["train", "val"]
@@ -136,9 +137,12 @@ def save_wikipedia_fact_dataset(folder):
         t0 = time.time()
 
         while current_output_idx <= total_sentences:
-            print('Extracted sentences: {} [{}]\tElapsed: {}'.format(current_output_idx,
-                                                                     100*current_output_idx / total_sentences,
-                                                                     timedelta(seconds=time.time() - t0)))
+            elapsed = time.time() - t0
+            ratio = current_output_idx / total_sentences
+            print('Extracted sentences: {} [{:.3f}%]\tElapsed: {}\tETA: {}'.format(
+                current_output_idx, 100 * ratio, timedelta(seconds=elapsed),
+                timedelta(seconds=elapsed / ratio - elapsed) if elapsed > 10 else '---')
+            )
             try:
                 dataset_item_list = pool.map(dataset.placeholder_sentence_extractor, range(workers))
                 batch = {
