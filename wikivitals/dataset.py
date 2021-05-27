@@ -9,6 +9,7 @@ import multiprocessing as mp
 from multiprocessing.dummy import Pool
 import time
 from datetime import timedelta
+from urllib.error import HTTPError
 
 
 class WikipediaSentences(object):
@@ -139,7 +140,7 @@ def save_wikipedia_fact_dataset(folder):
         while current_output_idx <= total_sentences:
             elapsed = time.time() - t0
             ratio = current_output_idx / total_sentences
-            print('Extracted sentences: {} [{:.3f}%]\tElapsed: {}\tETA: {}'.format(
+            print('Extracted sentences: {} [{:.5f}%]\tElapsed: {}\tETA: {}'.format(
                 current_output_idx, 100 * ratio, timedelta(seconds=elapsed),
                 timedelta(seconds=elapsed / ratio - elapsed) if elapsed > 10 else '---')
             )
@@ -159,7 +160,7 @@ def save_wikipedia_fact_dataset(folder):
                     json.dump(sentences, f)  # will be massive so no indent
                 np.save(os.path.join(folder, dataset_type + '_labels.npy'), labels)
 
-            except:  # Handle rare exceptions (multiprocessing errors and webpage retrieval failure
+            except HTTPError:  # Handle rare exception: webpage retrieval failure
                 continue
 
         pool.close()
