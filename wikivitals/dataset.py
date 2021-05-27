@@ -142,7 +142,7 @@ def save_wikipedia_fact_dataset(folder):
             ratio = current_output_idx / total_sentences
             print('Extracted sentences: {} [{:.5f}%]\tElapsed: {}\tETA: {}'.format(
                 current_output_idx, 100 * ratio, timedelta(seconds=elapsed),
-                timedelta(seconds=elapsed / ratio - elapsed) if elapsed > 10 else '---')
+                timedelta(seconds=elapsed / ratio - elapsed) if ratio > 0.000001 else '---')
             )
             try:
                 dataset_item_list = pool.map(dataset.placeholder_sentence_extractor, range(workers))
