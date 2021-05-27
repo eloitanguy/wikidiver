@@ -7,7 +7,8 @@ from wikidatavitals.dataset import FactFinder, FactNotFoundError
 import numpy as np
 import multiprocessing as mp
 from multiprocessing.dummy import Pool
-import tqdm
+import time
+from datetime import timedelta
 
 
 class WikipediaSentences(object):
@@ -132,22 +133,30 @@ def save_wikipedia_fact_dataset(folder):
         sentences = []
         labels = np.zeros(total_sentences)
         current_output_idx = 0
+        t0 = time.time()
 
-        for iteration in tqdm.trange(total_sentences // workers + 1):
-            dataset_item_list = pool.map(dataset.placeholder_sentence_extractor, range(workers))
-            batch = {
-                'sentence': [item['sentence'] for item in dataset_item_list],
-                'label': np.array([item['label'] for item in dataset_item_list])
-            }
-            batch_size = len(batch['sentence'])
-            upper_slice_exclusive = min(current_output_idx + batch_size, total_sentences)  # avoid going OOB
-            labels[current_output_idx:upper_slice_exclusive] = batch['label']
-            sentences.extend(batch['sentence'])
+        while current_output_idx <= total_sentences:
+            print('Extracted sentences: {} [{}]\tElapsed: {}'.format(current_output_idx,
+                                                                     100*current_output_idx / total_sentences,
+                                                                     timedelta(seconds=time.time() - t0)))
+            try:
+                dataset_item_list = pool.map(dataset.placeholder_sentence_extractor, range(workers))
+                batch = {
+                    'sentence': [item['sentence'] for item in dataset_item_list],
+                    'label': np.array([item['label'] for item in dataset_item_list])
+                }
+                batch_size = len(batch['sentence'])
+                upper_slice_exclusive = min(current_output_idx + batch_size, total_sentences)  # avoid going OOB
+                labels[current_output_idx:upper_slice_exclusive] = batch['label']
+                sentences.extend(batch['sentence'])
 
-            if iteration % 10 == 0:  # checkpointing
+                # checkpointing at every step
                 with open(os.path.join(folder, dataset_type + '_sentences.json'), 'w') as f:
                     json.dump(sentences, f)  # will be massive so no indent
                 np.save(os.path.join(folder, dataset_type + '_labels.npy'), labels)
+
+            except:  # Handle rare exceptions (multiprocessing errors and webpage retrieval failure
+                continue
 
         pool.close()
         with open(os.path.join(folder, dataset_type + '_sentences.json'), 'w') as f:
