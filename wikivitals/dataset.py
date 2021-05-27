@@ -6,6 +6,7 @@ from models.comparators import get_sliced_relation_mention
 from wikidatavitals.dataset import FactFinder, FactNotFoundError
 import numpy as np
 import multiprocessing as mp
+from multiprocessing.dummy import Pool
 import tqdm
 
 
@@ -127,7 +128,7 @@ def save_wikipedia_fact_dataset(folder):
 
         total_sentences = len(dataset)
         workers = mp.cpu_count()
-        pool = mp.Pool(workers)
+        pool = Pool(workers)
         sentences = []
         labels = np.zeros(total_sentences)
         current_output_idx = 0

@@ -20,6 +20,10 @@ First of all it is required to install the python modules with:
 In order to obtain all the dataset files, you can run the included code below or download the files from 
 [google drive](https://drive.google.com/drive/folders/1bHteMXBDD0UJ1r-t4aXfWx7Rkj0ag4JY?usp=sharing).
 
+This repo uses spacy's 'en' model, please download it using:
+
+    python -m spacy download en    
+
 #### Obtaining verbs
 
 We take the aliases of the wikidata-vitals relations from [TorchKGE](https://torchkge.readthedocs.io/en/latest/).
