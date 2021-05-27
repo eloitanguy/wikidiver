@@ -154,6 +154,7 @@ def save_wikipedia_fact_dataset(folder):
                 upper_slice_exclusive = min(current_output_idx + batch_size, total_sentences)  # avoid going OOB
                 labels[current_output_idx:upper_slice_exclusive] = batch['label']
                 sentences.extend(batch['sentence'])
+                current_output_idx += batch_size
 
                 # checkpointing at every step
                 with open(os.path.join(folder, dataset_type + '_sentences.json'), 'w') as f:
@@ -161,6 +162,7 @@ def save_wikipedia_fact_dataset(folder):
                 np.save(os.path.join(folder, dataset_type + '_labels.npy'), labels)
 
             except HTTPError:  # Handle rare exception: webpage retrieval failure
+                print('Caught an HTTPError.')
                 continue
 
         pool.close()
