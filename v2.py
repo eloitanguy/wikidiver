@@ -11,14 +11,14 @@ import numpy as np
 from benchmark import usa_benchmark
 
 
-def train_v2():
+def train_v2(model_type='v2'):
     """
     Trains and saves an XGB classifier using the configuration in the config file.\n
     This requires the encoded Wikidata dataset, obtainable using 'python wikidatavitals/dataset --encode'.\n
     Training takes around 30 minutes.
     """
-    experiment_name = 'xgb_trained'
-    x = XGBRelationClassifier(experiment_name)
+    experiment_name = model_type + '_trained'
+    x = XGBRelationClassifier(experiment_name, model_type=model_type)
     x.train()
     x.val()
     x.save()
@@ -27,12 +27,16 @@ def train_v2():
 class V2(object):
     """
     Upon creation, loads a trained XGB model (trained using v2.py using the parameters in the config file).\n
-    This model is trained as a classifier, using BERT representations of input 'sentences' of the form <e1><verb><e2>
-    taken from Wikidata facts. The model classifies within 50 relations from Wikidata.\n
+    There are two versions: V2 and V2.5 trained to classify sentences into relations: \n
+    - V2: This model is trained using BERT representations on 'sentences' of the form <e1><verb><e2> from Wikidata.
+    - V2.5: This model is trained using Wikipedia sentences annotated using known Wikidata facts.
+    The model classifies within 50 relations from Wikidata.
     The training procedure uses the configuration in XGB_CONFIG, and this model uses the parameters in V2_CONFIG.
     """
-    def __init__(self, experiment_name='xgb_trained'):
-        self.xgb = XGBRelationClassifier(experiment_name, load=True)
+    def __init__(self, experiment_name='trained', model_type='v2'):
+        if experiment_name == 'trained':  # handling the two default possibilities
+            experiment_name = model_type + '_trained'
+        self.xgb = XGBRelationClassifier(experiment_name, load=True, model_type=model_type)
         self.coreference_resolver = CoreferenceResolver()
         self.max_entity_pair_distance = V2_CONFIG['max_entity_pair_distance']
         self.bilateral_context = V2_CONFIG['bilateral_context']
@@ -111,17 +115,23 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--t', '--train', action='store_true', help='Trains and saves an XGB classifier ')
     parser.add_argument('--s', '--sentence', type=str, default='', help="Sentence to extract facts from using v2")
+    parser.add_argument('--p5', '--point-five', '--point-5', action='store_true', help='Switches to v2.5 instead of v2')
     parser.add_argument('--b', '--benchmark', action='store_true', help="Run the USA benchmark")
     args = parser.parse_args()
 
+    m_type = 'v2.5' if args.p5 else 'v2'
+
     if args.s:
-        v2 = V2()
+        v2 = V2(model_type=m_type)
         print('Parsing "{}" ...'.format(args.s))
         v2.extract_facts(args.s, verbose=True)
 
     if args.t:
-        train_v2()
+        print('Training {} ...'.format(m_type))
+        train_v2(model_type=m_type)
 
     if args.b:
-        v2 = V2()
-        usa_benchmark(v2, V2_CONFIG)
+        v2 = V2(model_type=m_type)
+        saved_config_for_benchmark = V2_CONFIG.copy()  # this dictionary is saved in the benchmark output for legibility
+        saved_config_for_benchmark['model_type'] = m_type
+        usa_benchmark(v2, saved_config_for_benchmark)

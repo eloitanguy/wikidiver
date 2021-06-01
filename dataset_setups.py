@@ -50,4 +50,4 @@ if __name__ == '__main__':
 
     if args.enc_wv:
         print('Encoding Wikivitals sentences using BERT-base ...')
-        save_encoded_sentences(WikiDataVitalsSentences, 'wikivitals/data/encoded/')
+        save_encoded_sentences(WikiVitalsAnnotatedSentences, 'wikivitals/data/encoded/')

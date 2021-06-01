@@ -191,6 +191,10 @@ class WikiVitalsAnnotatedSentences(Dataset):
         with open('wikivitals/data/encoded/{}_sentences.json'.format(dataset_type), 'r') as f:
             self.sentences = json.load(f)  # loading the wikivitals sentences
 
+        # redundancy for compatibility with the general encoding script
+        with open('wikivitals/data/encoded/relation_indices.json', 'r') as f:
+            self.relation_idx_to_name = json.load(f)
+
         self.labels = list(np.load('wikivitals/data/encoded/{}_labels.npy'.format(dataset_type)))
 
         assert len(self.sentences) == len(self.labels), "Got incompatible sentence and label files"

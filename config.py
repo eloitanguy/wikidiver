@@ -7,7 +7,14 @@ V1_CONFIG = {
     'max_entity_pair_distance': 3
 }
 
-XGB_CONFIG = {
+V2_XGB_CONFIG = {
+    'max_depth': 5,
+    'colsample_bytree': 0.3,
+    'n_estimators': 100,
+    'learning_rate': 0.3
+}
+
+V2p5_XGB_CONFIG = {
     'max_depth': 5,
     'colsample_bytree': 0.3,
     'n_estimators': 100,

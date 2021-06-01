@@ -131,7 +131,10 @@ Adjust the configuration in the config file (the default value has good results 
 
     python v2.py --benchmark
 
-## V2.5 (WIP)
+## V2.5
+
+This model is trained using Wikipedia sentences annotated using known Wikidata facts.
+It is a slight variation on the v2 idea, however preparing its dataset is extremely costly.
 
 #### Saving the article texts
 
@@ -140,6 +143,18 @@ Adjust the configuration in the config file (the default value has good results 
 #### Preparing an annotated text dataset
 
     python dataset_setups.py --annotate-wikivitals
+
+#### Encode the annotated text dataset
+
+    python dataset_setups.py --encode-wikivitals
+
+#### Train v2.5
+
+    python v2.py --train --point-five
+
+#### Benchmark V2.5 with the USA benchmark
+
+    python v2.py --benchmark --point-five
 
 ## V3 Ideas
 
