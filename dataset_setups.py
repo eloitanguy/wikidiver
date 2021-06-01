@@ -3,7 +3,7 @@ from wikidatavitals.dataset import save_relations, save_verb_idx_to_relation_lis
     save_entity_dictionary, WikiDataVitalsSentences
 import argparse
 from wikivitals.construction import save_all_texts
-from wikivitals.dataset import save_wikipedia_fact_dataset
+from wikivitals.dataset import save_wikipedia_fact_dataset, WikiVitalsAnnotatedSentences
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -50,4 +50,4 @@ if __name__ == '__main__':
 
     if args.enc_wv:
         print('Encoding Wikivitals sentences using BERT-base ...')
-        # TODO
+        save_encoded_sentences(WikiDataVitalsSentences, 'wikivitals/data/encoded/')

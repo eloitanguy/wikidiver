@@ -10,6 +10,7 @@ from multiprocessing.dummy import Pool
 import time
 from datetime import timedelta
 from urllib.error import HTTPError
+from torch.utils.data import Dataset
 
 
 class WikipediaSentences(object):
@@ -174,3 +175,31 @@ def save_wikipedia_fact_dataset(folder):
     save_dataset('train')
     print('Saving the validation set ...')
     save_dataset('val')
+
+
+class WikiVitalsAnnotatedSentences(Dataset):
+    """
+    A torch (string) Dataset containing annotated Wikivitals sentences.\n
+    Each entry is a dictionary:\n
+    {\t'sentence': [a pseudo-sentence],
+    \t'label': [the idx of the relation]}
+    """
+
+    def __init__(self, dataset_type):
+        assert dataset_type in ["train", "val"]
+
+        with open('wikivitals/data/encoded/{}_sentences.json'.format(dataset_type), 'r') as f:
+            self.sentences = json.load(f)  # loading the wikivitals sentences
+
+        self.labels = list(np.load('wikivitals/data/encoded/{}_labels.npy'.format(dataset_type)))
+
+        assert len(self.sentences) == len(self.labels), "Got incompatible sentence and label files"
+
+    def __len__(self):
+        return len(self.sentences)
+
+    def __getitem__(self, item):
+        return {
+            'sentence': self.sentences[item],
+            'label': self.labels[item]
+        }
