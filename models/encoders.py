@@ -6,8 +6,8 @@ import json
 import os
 
 
-def preprocess_sentences_encoder(sentences, tokenizer, device):
-    encoded_dict = tokenizer(sentences, add_special_tokens=True, max_length=32, padding='max_length',
+def preprocess_sentences_encoder(sentences, tokenizer, device, max_length=32):
+    encoded_dict = tokenizer(sentences, add_special_tokens=True, max_length=max_length, padding='max_length',
                              truncation=True, return_attention_mask=True, return_tensors='pt')
 
     return encoded_dict['input_ids'].to(device), encoded_dict['attention_mask'].to(device)
@@ -77,3 +77,27 @@ def save_encoded_sentences(torch_dataset, folder):
     save_dataset('train')
     print('Saving the validation set ...')
     save_dataset('val')
+
+
+class PairEncoder(object):
+    """
+    Uses BERT attentions in order to encode an ordered pair of words from a sentence. For a given word index pair, the
+    output is a 1D tensor of shape 12 layers * 12 heads = 144.
+    """
+    def __init__(self, max_sentence_length=16):
+        self.tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
+        self.bert = BertModel.from_pretrained("bert-base-uncased").cuda().eval()
+        self.max_sentence_length = max_sentence_length
+        self.device = torch.device('cuda:0')
+
+    def get_pair_encoding(self, sentence, word1_idx, word2_idx):
+        """
+        :param sentence: a list of words
+        :param word1_idx: the index of the first word in the pair
+        :param word2_idx: the index of the second word in the pair
+        :return: a 1D torch tensor of shape (144) with the attentions word 1 -> word 2
+        """
+        ids, masks = preprocess_sentences_encoder(sentence, self.tokenizer, self.device,
+                                                  max_length=self.max_sentence_length)
+        output = self.bert(ids, attention_mask=masks, output_attentions=True)
+        return torch.cat([a[0, :, word1_idx, word2_idx] for a in output.attentions])
