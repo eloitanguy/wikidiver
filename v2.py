@@ -2,7 +2,7 @@ from models.classifiers import XGBRelationClassifier
 from models.comparators import get_sliced_relation_mention
 import argparse
 from models.ner import wikifier, CoreferenceResolver
-from config import V2_CONFIG
+from config import V2_CONFIG, V2p5_CONFIG
 import json
 from transformers import BertTokenizer, BertModel
 import torch
@@ -36,12 +36,13 @@ class V2(object):
     def __init__(self, experiment_name='trained', model_type='v2'):
         if experiment_name == 'trained':  # handling the two default possibilities
             experiment_name = model_type + '_trained'
+        self.config = V2_CONFIG if model_type == 'v2' else V2p5_CONFIG
         self.xgb = XGBRelationClassifier(experiment_name, load=True, model_type=model_type)
         self.coreference_resolver = CoreferenceResolver()
-        self.max_entity_pair_distance = V2_CONFIG['max_entity_pair_distance']
-        self.bilateral_context = V2_CONFIG['bilateral_context']
-        self.threshold = V2_CONFIG['threshold']
-        self.max_sentence_length = V2_CONFIG['max_sentence_length']
+        self.max_entity_pair_distance = self.config['max_entity_pair_distance']
+        self.bilateral_context = self.config['bilateral_context']
+        self.threshold = self.config['threshold']
+        self.max_sentence_length = self.config['max_sentence_length']
 
         with open('wikidatavitals/data/encoded/relation_indices.json', 'r') as f:
             self.relations_by_idx = json.load(f)
@@ -132,6 +133,4 @@ if __name__ == '__main__':
 
     if args.b:
         v2 = V2(model_type=m_type)
-        saved_config_for_benchmark = V2_CONFIG.copy()  # this dictionary is saved in the benchmark output for legibility
-        saved_config_for_benchmark['model_type'] = m_type
-        usa_benchmark(v2, saved_config_for_benchmark)
+        usa_benchmark(v2, v2.config)

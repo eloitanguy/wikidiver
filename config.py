@@ -28,3 +28,11 @@ V2_CONFIG = {
     'threshold': 0.9,
     'max_sentence_length': 12
 }
+
+V2p5_CONFIG = {
+    'name': 'V2',
+    'bilateral_context': 4,
+    'max_entity_pair_distance': 3,
+    'threshold': 0.6,
+    'max_sentence_length': 16
+}
