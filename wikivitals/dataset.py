@@ -193,19 +193,24 @@ def wikify_sentences(input_file, output_file):
     all_wikified_results = []
 
     while current_output_idx <= total_sentences:
-        elapsed = time.time() - t0
-        ratio = current_output_idx / total_sentences
-        print('Extracted sentences: {} [{:.5f}%]\tElapsed: {}\tETA: {}'.format(
-            current_output_idx, 100 * ratio, timedelta(seconds=elapsed),
-            timedelta(seconds=elapsed / ratio - elapsed) if ratio > 0.000001 else '---')
-        )
-        upper_slice_exclusive = min(current_output_idx + workers, total_sentences)
-        wikifier_results = pool.map(wikifier, sentences[current_output_idx: upper_slice_exclusive])
-        all_wikified_results.extend(wikifier_results)
-        current_output_idx += workers
+        try:
+            elapsed = time.time() - t0
+            ratio = current_output_idx / total_sentences
+            print('Extracted sentences: {} [{:.5f}%]\tElapsed: {}\tETA: {}'.format(
+                current_output_idx, 100 * ratio, timedelta(seconds=elapsed),
+                timedelta(seconds=elapsed / ratio - elapsed) if ratio > 0.000001 else '---')
+            )
+            upper_slice_exclusive = min(current_output_idx + workers, total_sentences)
+            wikifier_results = pool.map(wikifier, sentences[current_output_idx: upper_slice_exclusive])
+            all_wikified_results.extend(wikifier_results)
+            current_output_idx += workers
 
-        with open(output_file, 'w') as f:  # checkpointing
-            json.dump(all_wikified_results, f)  # no indent for space efficiency
+            with open(output_file, 'w') as f:  # checkpointing
+                json.dump(all_wikified_results, f)  # no indent for space efficiency
+
+        except HTTPError:  # Handle rare exception: webpage retrieval failure
+            print('Caught an HTTPError.')
+            continue
 
     pool.close()
     print('Finished!')
