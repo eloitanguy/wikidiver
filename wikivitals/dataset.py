@@ -208,8 +208,8 @@ def wikify_sentences(input_file, output_file):
             with open(output_file, 'w') as f:  # checkpointing
                 json.dump(all_wikified_results, f)  # no indent for space efficiency
 
-        except HTTPError:  # Handle rare exception: webpage retrieval failure
-            print('Caught an HTTPError.')
+        except (HTTPError, KeyError):  # Handle rare exception: webpage retrieval failure
+            print('Caught a non-critical error.')
             continue
 
     pool.close()
