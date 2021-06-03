@@ -1,4 +1,4 @@
-from models.encoders import save_encoded_sentences
+from models.encoders import save_encoded_sentences, save_pair_dataset
 from wikidatavitals.dataset import save_relations, save_verb_idx_to_relation_list, save_property_verbs_dictionary, \
     save_entity_dictionary, WikiDataVitalsSentences
 import argparse
@@ -23,6 +23,8 @@ if __name__ == '__main__':
                         help='Encoding Wikivitals sentences using BERT-base')
     parser.add_argument('--w-wv', '--wikify-wikivitals', action='store_true',
                         help='Run the wikifier on the wikivitals sentences (temporary)')
+    parser.add_argument('--enc-p', '--encode-pairs', action='store_true',
+                        help='Reads WikiVitals sentences and wikifier results and creates a dataset for pair classif')
     args = parser.parse_args()
 
     if args.enc_wd:
@@ -61,3 +63,8 @@ if __name__ == '__main__':
         wikify_sentences(folder + 'train_sentences.json', folder + 'wikified_train_sentences.json')
         print('Processing the val sentences ...')
         wikify_sentences(folder + 'val_sentences.json', folder + 'wikified_val_sentences.json')
+
+    if args.enc_p:
+        print('Saving the pair classification dataset ...')
+        folder = 'wikivitals/data/encoded/'
+        save_pair_dataset(folder + 'wikified_train_sentences.json', folder + 'train_sentences.json')

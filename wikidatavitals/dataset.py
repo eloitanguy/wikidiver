@@ -198,9 +198,15 @@ class FactNotFoundError(Exception):
 
 
 class FactFinder(object):
-    def __init__(self):
+    def __init__(self, require_top=-1):
         with open('wikidatavitals/data/relations.json', 'r') as f:
             self.relations = json.load(f)
+
+        self.require_top = require_top
+        with open('wikidatavitals/data/relation_counts.json', 'r') as f:
+            relation_counts = json.load(f)  # loading the ordered relation counts
+
+        self.relation_ids = [c[0] for c in relation_counts[:self.require_top]] if self.require_top != -1 else None
 
     def get_fact(self, e1_id, e2_id):
         """
@@ -210,6 +216,12 @@ class FactFinder(object):
         """
         relation_subset = [(e1, r, e2) for (e1, r, e2) in self.relations if e1 == e1_id and e2 == e2_id]
         if len(relation_subset) > 0:
-            return relation_subset[0]
+            if self.require_top == -1:  # if there is no filter on the relations, output the first triplet
+                return relation_subset[0]
+            else:  # finding a triplet with a relation in the top n
+                for triplet in relation_subset:
+                    if triplet[1] in self.relation_ids:
+                        return triplet
+                raise FactNotFoundError  # no triplet satisfies the condition on the relation
         else:
             raise FactNotFoundError
