@@ -177,6 +177,40 @@ def save_wikipedia_fact_dataset(folder):
     save_dataset('val')
 
 
+def wikify_sentences(input_file, output_file):
+    """
+    Since we forgot to save the entire wikifier results, we have to parse the saved article sentences (again)
+    TODO Also add this to save_wikipedia_fact_dataset in the future for reproducibility
+    Saves the wikifier results on the given json containing the list of sentences to process.
+    """
+    with open(input_file, 'r') as f:
+        sentences = json.load(f)
+    total_sentences = len(sentences)
+    workers = mp.cpu_count()
+    pool = Pool(workers)
+    current_output_idx = 0
+    t0 = time.time()
+    all_wikified_results = []
+
+    while current_output_idx <= total_sentences:
+        elapsed = time.time() - t0
+        ratio = current_output_idx / total_sentences
+        print('Extracted sentences: {} [{:.5f}%]\tElapsed: {}\tETA: {}'.format(
+            current_output_idx, 100 * ratio, timedelta(seconds=elapsed),
+            timedelta(seconds=elapsed / ratio - elapsed) if ratio > 0.000001 else '---')
+        )
+        upper_slice_exclusive = min(current_output_idx + workers, total_sentences)
+        wikifier_results = pool.map(wikifier, sentences[current_output_idx: upper_slice_exclusive])
+        all_wikified_results.extend(wikifier_results)
+        current_output_idx += workers
+
+        with open(output_file, 'w') as f:  # checkpointing
+            json.dump(all_wikified_results, f)  # no indent for space efficiency
+
+    pool.close()
+    print('Finished!')
+
+
 class WikiVitalsAnnotatedSentences(Dataset):
     """
     A torch (string) Dataset containing annotated Wikivitals sentences.\n

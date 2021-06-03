@@ -3,7 +3,7 @@ from wikidatavitals.dataset import save_relations, save_verb_idx_to_relation_lis
     save_entity_dictionary, WikiDataVitalsSentences
 import argparse
 from wikivitals.construction import save_all_texts
-from wikivitals.dataset import save_wikipedia_fact_dataset, WikiVitalsAnnotatedSentences
+from wikivitals.dataset import save_wikipedia_fact_dataset, WikiVitalsAnnotatedSentences, wikify_sentences
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -21,6 +21,8 @@ if __name__ == '__main__':
                         help='Save annotated Wikivitals sentences')
     parser.add_argument('--enc-wv', '--encode-wikivitals', action='store_true',
                         help='Encoding Wikivitals sentences using BERT-base')
+    parser.add_argument('--w-wv', '--wikify-wikivitals', action='store_true',
+                        help='Run the wikifier on the wikivitals sentences (temporary)')
     args = parser.parse_args()
 
     if args.enc_wd:
@@ -51,3 +53,11 @@ if __name__ == '__main__':
     if args.enc_wv:
         print('Encoding Wikivitals sentences using BERT-base ...')
         save_encoded_sentences(WikiVitalsAnnotatedSentences, 'wikivitals/data/encoded/')
+
+    if args.w_wv:
+        print('Running the wikifier on the wikivitals sentences ...')
+        folder = 'wikivitals/data/encoded/'
+        print('Processing the train sentences ...')
+        wikify_sentences(folder + 'train_sentences.json', folder + 'wikified_train_sentences.json')
+        print('Processing the val sentences ...')
+        wikify_sentences(folder + 'val_sentences.json', folder + 'wikified_val_sentences.json')
