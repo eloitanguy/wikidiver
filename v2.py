@@ -31,7 +31,7 @@ class V2(object):
     - V2: This model is trained using BERT representations on 'sentences' of the form <e1><verb><e2> from Wikidata.
     - V2.5: This model is trained using Wikipedia sentences annotated using known Wikidata facts.
     The model classifies within 50 relations from Wikidata.
-    The training procedure uses the configuration in XGB_CONFIG, and this model uses the parameters in V2_CONFIG.
+    The training procedure uses the configuration in V2(p5)XGB_CONFIG, and this model uses the parameters in V2_CONFIG.
     """
     def __init__(self, experiment_name='trained', model_type='v2'):
         if experiment_name == 'trained':  # handling the two default possibilities

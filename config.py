@@ -36,3 +36,18 @@ V2p5_CONFIG = {
     'threshold': 0.6,
     'max_sentence_length': 16
 }
+
+V3_XGB_CONFIG = {
+    'max_depth': 5,
+    'colsample_bytree': 0.3,
+    'n_estimators': 100,
+    'learning_rate': 0.3
+}
+
+V3_CONFIG = {
+    'name': 'V2',
+    'bilateral_context': 4,
+    'max_entity_pair_distance': 3,
+    'threshold': 0.9,
+    'max_sentence_length': 12
+}

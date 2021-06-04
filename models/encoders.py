@@ -107,8 +107,9 @@ class PairEncoder(object):
             e1_lower, e1_upper = e1_slice
             e2_lower, e2_upper = e2_slice
             output = self.bert(ids, attention_mask=masks, output_attentions=True)
-            return torch.stack([a[0, :, e1_lower:e1_upper, e2_lower:e2_upper].mean() for a in output.attentions] +
-                               [a[0, :, e2_lower:e2_upper, e1_lower:e1_upper].mean() for a in output.attentions])
+            att = output.attentions
+            return torch.cat([a[0, :, e1_lower:e1_upper, e2_lower:e2_upper].mean(axis=(1, 2)) for a in att] +
+                             [a[0, :, e2_lower:e2_upper, e1_lower:e1_upper].mean(axis=(1, 2)) for a in att])
 
 
 class TripletFinder(object):

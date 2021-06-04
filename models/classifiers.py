@@ -3,7 +3,7 @@ import json
 import xgboost as xgb
 from sklearn.metrics import f1_score
 import os
-from config import V2_XGB_CONFIG, V2p5_XGB_CONFIG
+from config import V2_XGB_CONFIG, V2p5_XGB_CONFIG, V3_XGB_CONFIG
 
 
 class XGBRelationClassifier(object):
@@ -17,10 +17,10 @@ class XGBRelationClassifier(object):
             and the XGB model from the experiment name (the config parameter will be ignored in this case!)
         """
         self.experiment_name = experiment_name
-        assert model_type in ['v2', 'v2.5'], 'Incorrect model_type: {} is not in [v2, v2.5]'.format(model_type)
-
+        assert model_type in ['v2', 'v2.5', 'v3'], 'model_type: {} is not in [v2, v2.5, v3]'.format(model_type)
+        model_type_to_config = {'v2': V2_XGB_CONFIG, 'v2.5': V2p5_XGB_CONFIG, 'v3': V3_XGB_CONFIG}
         if config is None:
-            config = V2_XGB_CONFIG if model_type == 'v2' else V2p5_XGB_CONFIG
+            config = model_type_to_config[model_type]
         self.model_type = model_type
 
         if load:
