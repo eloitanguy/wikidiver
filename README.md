@@ -156,11 +156,26 @@ It is a slight variation on the v2 idea, however preparing its dataset is extrem
 
     python v2.py --benchmark --point-five
 
-## V3 Ideas
+## V3
 
-- instead of using the BERT [CLS] output, encode every word pair using their attentions
-- classify each word pair into relations
-- V3.5: use the TransE pair result in the pipeline
+This model classifies entity pairs (i.e., a pair of word groups detected by wikifier) into relations. The word pairs
+are encoded using BERT's attentions, and we classify these pair encodings using an XGB model.
+- V3.5 idea: use the TransE pair result in the pipeline
+
+#### Encode the pair dataset
+
+The following command takes the sentences from ```wikivitals/data/encoded/train_sentences.json``` and creates an
+annotated pair dataset from it:
+
+    python dataset_setups.py --encode-pairs
+
+#### Train V3
+
+    python v3.py --train
+
+#### Benchmark V3 with the USA benchmark
+
+     python v3.py --benchmark
 
 ## More random ideas
 
@@ -170,3 +185,5 @@ It is a slight variation on the v2 idea, however preparing its dataset is extrem
 - structured NER
 - TransE-aware fact extraction
 - graph-NN on the entity/relation tree for hierarchical thinking
+- reasoning on the POS tree
+- creating a sentence graph using attentions

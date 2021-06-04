@@ -47,12 +47,19 @@ class XGBRelationClassifier(object):
         else:  # wikivitals annotated sentences
             self.dataset_folder = 'wikivitals/data/encoded/'
 
+        suffix = '_pair_encodings' if model_type == 'v3' else ''
+        middle = '_pair' if model_type == 'v3' else ''
+        self.Xt_file = self.dataset_folder + 'train{}.npy'.format(suffix)
+        self.Yt_file = self.dataset_folder + 'train{}_labels.npy'.format(middle)
+        self.Xv_file = self.dataset_folder + 'val{}.npy'.format(suffix)
+        self.Yv_file = self.dataset_folder + 'val{}_labels.npy'.format(middle)
+
     def train(self, verbose=False):
         """
         Trains the model on the training set and updates the micro-averaged F1 score attribute
         """
-        Xt = np.load(self.dataset_folder + 'train.npy')
-        Yt = np.load(self.dataset_folder + 'train_labels.npy').astype(int)
+        Xt = np.load(self.Xt_file)
+        Yt = np.load(self.Yt_file).astype(int)
         self.model.fit(Xt, Yt)
         train_predictions = self.model.predict(Xt)
         self.train_f1 = f1_score(train_predictions, Yt, average='micro')
@@ -64,8 +71,8 @@ class XGBRelationClassifier(object):
         """
         Updates the micro-averaged F1 score attribute on the validation set
         """
-        Xv = np.load(self.dataset_folder + 'val.npy')
-        Yv = np.load(self.dataset_folder + 'val_labels.npy').astype(int)
+        Xv = np.load(self.Xv_file)
+        Yv = np.load(self.Yv_file).astype(int)
         val_predictions = self.model.predict(Xv)
         self.val_f1 = f1_score(val_predictions, Yv, average='micro')
         self.config['val_f1'] = self.val_f1

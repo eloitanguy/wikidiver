@@ -48,6 +48,6 @@ V3_CONFIG = {
     'name': 'V2',
     'bilateral_context': 4,
     'max_entity_pair_distance': 3,
-    'threshold': 0.9,
+    'threshold': 0.1,
     'max_sentence_length': 12
 }

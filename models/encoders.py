@@ -107,9 +107,10 @@ class PairEncoder(object):
             e1_lower, e1_upper = e1_slice
             e2_lower, e2_upper = e2_slice
             output = self.bert(ids, attention_mask=masks, output_attentions=True)
-            att = output.attentions
-            return torch.cat([a[0, :, e1_lower:e1_upper, e2_lower:e2_upper].mean(axis=(1, 2)) for a in att] +
-                             [a[0, :, e2_lower:e2_upper, e1_lower:e1_upper].mean(axis=(1, 2)) for a in att])
+            return torch.cat(
+                [a[0, :, e1_lower:e1_upper, e2_lower:e2_upper].mean(axis=(1, 2)) for a in output.attentions] +
+                [a[0, :, e2_lower:e2_upper, e1_lower:e1_upper].mean(axis=(1, 2)) for a in output.attentions]
+            )
 
 
 class TripletFinder(object):
@@ -179,7 +180,7 @@ def save_pair_dataset(wikifier_results_file, sentence_file, n_relations=50):
 
     n_total = len(pair_encodings)
     train_val_split = int(n_total * 0.66)
-    train_pair_encodings, val_pair_encodings = pair_encodings[train_val_split:], pair_encodings[:train_val_split]
+    train_pair_encodings, val_pair_encodings = pair_encodings[:train_val_split], pair_encodings[train_val_split:]
     train_pair_labels, val_pair_labels = pair_labels[train_val_split:], pair_labels[:train_val_split]
     np.save('wikivitals/data/encoded/train_pair_encodings.npy', train_pair_encodings)
     np.save('wikivitals/data/encoded/val_pair_encodings.npy', val_pair_encodings)

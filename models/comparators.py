@@ -55,4 +55,3 @@ def get_sliced_relation_mention(e1_dict, e2_dict, sentence, bilateral_context=0)
     end_word_idx = min(e2_dict['end_idx'] + 1 + bilateral_context, text_length - 1)
     res_list = text_list[start_word_idx:end_word_idx]
     return ' '.join(res_list)
-
