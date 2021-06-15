@@ -4,6 +4,7 @@ from wikidatavitals.dataset import save_relations, save_verb_idx_to_relation_lis
 import argparse
 from wikivitals.construction import save_all_texts
 from wikivitals.dataset import save_wikipedia_fact_dataset, WikiVitalsAnnotatedSentences, wikify_sentences
+from models.filters import save_entity_types, save_relation_argument_types
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -25,6 +26,10 @@ if __name__ == '__main__':
                         help='Run the wikifier on the wikivitals sentences (temporary)')
     parser.add_argument('--enc-p', '--encode-pairs', action='store_true',
                         help='Reads WikiVitals sentences and wikifier results and creates a dataset for pair classif')
+    parser.add_argument('--et', '--entity-types', action='store_true',
+                        help='Saves all entity types in a json file')
+    parser.add_argument('--rt', '--relation-types', action='store_true',
+                        help='Saves all relation argument type possibilities in a json file')
     args = parser.parse_args()
 
     if args.enc_wd:
@@ -68,3 +73,11 @@ if __name__ == '__main__':
         print('Saving the pair classification dataset ...')
         folder = 'wikivitals/data/encoded/'
         save_pair_dataset(folder + 'wikified_train_sentences.json', folder + 'train_sentences.json')
+
+    if args.et:
+        print('Saving all entity types ...')
+        save_entity_types()
+
+    if args.rt:
+        print('Saving all relation argument type possibilities ...')
+        save_relation_argument_types()

@@ -67,6 +67,14 @@ in Wikidata-vitals using:
 
 This execution takes about a minute, and the two files weigh 31 kB and 6.9 MB.
 
+#### Obtaining entity and relation types
+
+In order to filter triplet possibilities, we need to store the types of each entity and the possible types of the 
+arguments of each relation. This is done with:
+
+    python dataset_setups.py --entity-types
+    python dataset_setups.py --relation-types
+
 ## V1: Comparing sentences
 
 We compare a query sentence with a list of generated sentence of the form "entity 1" "verb" "entity 2"
