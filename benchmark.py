@@ -65,6 +65,17 @@ class FactChecker(object):
         return triplet in self.facts
 
 
+class PairChecker(object):
+    def __init__(self):
+        with open('wikivitals/data/benchmark/usa_facts.json', 'r') as f:
+            facts = json.load(f)
+
+        self.pairs = [(h, t) for (h, _, t) in facts]
+
+    def check(self, e1, e2):
+        return (e1, e2) in self.pairs
+
+
 def usa_benchmark(extractor, config, output_name='usa_benchmark_results'):
     t0 = time.time()
     print('Starting USA benchmark ...')
@@ -84,6 +95,10 @@ def usa_benchmark(extractor, config, output_name='usa_benchmark_results'):
     success_bool = [FC.check(predicted_fact) for predicted_fact in predicted_facts_usa]
     success01 = np.array([int(b) for b in success_bool])
 
+    PC = PairChecker()
+    pair_success_bool = [PC.check(e1, e2) for (e1, _, e2) in predicted_facts_usa]
+    pair_success01 = np.array([int(b) for b in pair_success_bool])
+
     print("Dumping fact-by-fact results ...")
     for output_idx, output_dict in enumerate(all_outputs):
         output_dict['is_correct'] = str(success_bool[output_idx])
@@ -92,11 +107,13 @@ def usa_benchmark(extractor, config, output_name='usa_benchmark_results'):
         json.dump([config] + all_outputs, f, indent=4)
 
     n_correct = np.sum(success01)
+    n_correct_pairs = np.sum(pair_success01)
     n_predictions = np.shape(success01)[0]
     if n_predictions == 0:
         print("No predictions :(")
     else:
-        print("Total predictions: {}\t correct%: {:.2f}%".format(n_predictions, 100 * n_correct/n_predictions))
+        print("Total predictions: {}\t correct%: {:.2f}%".format(n_predictions, 100 * n_correct / n_predictions))
+        print("Total pairs: {}\t correct%: {:.2f}%".format(n_predictions, 100 * n_correct_pairs / n_predictions))
 
     print('Benchmark time: ', timedelta(seconds=time.time()-t0))
 
