@@ -75,6 +75,13 @@ arguments of each relation. This is done with:
     python dataset_setups.py --entity-types
     python dataset_setups.py --relation-types
 
+## V0: Giving the most popular legal relations
+
+This is a baseline that outputs the most likely relation that satisfies type constraints. A triplet is considered legal
+if the entities have legal types for the relation. An entity type is defined by an "instance-of" relation in Wikidata,
+and the legal types for the head (h) and tail (t) entities for relation (r) are all the types of the corresponding entities
+in triplets (h', r, t') present in Wikidata.
+
 ## V1: Comparing sentences
 
 We compare a query sentence with a list of generated sentence of the form "entity 1" "verb" "entity 2"

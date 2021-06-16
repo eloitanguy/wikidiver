@@ -1,3 +1,9 @@
+V0_CONFIG = {
+    'name': 'V1',
+    'n_relations': 50,
+    'max_entity_pair_distance': 3
+}
+
 V1_CONFIG = {
     'name': 'V1',
     'n_relations': 50,
