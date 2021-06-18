@@ -1,7 +1,6 @@
 from models.classifiers import XGBRelationClassifier
 from models.comparators import get_sliced_relation_mention
 import argparse
-from models.ner import wikifier, CoreferenceResolver
 from config import V2_CONFIG, V2p5_CONFIG
 import json
 from transformers import BertTokenizer, BertModel
@@ -9,6 +8,7 @@ import torch
 from models.encoders import preprocess_sentences_encoder
 import numpy as np
 from benchmark import usa_benchmark
+from extractor_base import Extractor, NoFact
 
 
 def train_v2(model_type='v2'):
@@ -24,7 +24,7 @@ def train_v2(model_type='v2'):
     x.save()
 
 
-class V2(object):
+class V2(Extractor):
     """
     Upon creation, loads a trained XGB model (trained using v2.py using the parameters in the config file).\n
     There are two versions: V2 and V2.5 trained to classify sentences into relations: \n
@@ -34,12 +34,14 @@ class V2(object):
     The training procedure uses the configuration in V2(p5)XGB_CONFIG, and this model uses the parameters in V2_CONFIG.
     """
     def __init__(self, experiment_name='trained', model_type='v2'):
+        self.config = V2_CONFIG if model_type == 'v2' else V2p5_CONFIG
+        max_entity_pair_distance = self.config['max_entity_pair_distance']
+        super().__init__(max_entity_pair_distance=max_entity_pair_distance)  # n_relations is imposed at 50 here
+
         if experiment_name == 'trained':  # handling the two default possibilities
             experiment_name = model_type + '_trained'
-        self.config = V2_CONFIG if model_type == 'v2' else V2p5_CONFIG
+
         self.xgb = XGBRelationClassifier(experiment_name, load=True, model_type=model_type)
-        self.coreference_resolver = CoreferenceResolver()
-        self.max_entity_pair_distance = self.config['max_entity_pair_distance']
         self.bilateral_context = self.config['bilateral_context']
         self.threshold = self.config['threshold']
         self.max_sentence_length = self.config['max_sentence_length']
@@ -51,65 +53,28 @@ class V2(object):
         self.bert_tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
         self.bert = BertModel.from_pretrained("bert-base-uncased").cuda().eval()
 
-    def extract_facts(self, sentence, verbose=False):
-        facts = []
-        # NER
-        processed_text = self.coreference_resolver(sentence)
-        wikifier_results = wikifier(processed_text)
-
-        # creating entity pairs: only pairs (e1, e2) in order
-        # with at most 'max_entity_pair_distance - 1' entities between them
-        n_mentions = len(wikifier_results)
-
-        if n_mentions < 2 and verbose:
-            print('Not enough detected entities: ', n_mentions)
-
+    def _get_relation(self, e1_dict, e2_dict, processed_text):
         with torch.no_grad():
-            for e1_idx in range(n_mentions):
-                for e2_idx in range(e1_idx + 1, min(e1_idx + self.max_entity_pair_distance, n_mentions)):
-                    # Preparing XGB input
-                    e1_dict, e2_dict = wikifier_results[e1_idx], wikifier_results[e2_idx]
-                    sliced_sentence = get_sliced_relation_mention(e1_dict, e2_dict, processed_text,
-                                                                  bilateral_context=self.bilateral_context)
+            sliced_sentence = get_sliced_relation_mention(e1_dict, e2_dict, processed_text,
+                                                          bilateral_context=self.bilateral_context)
 
-                    if len(sliced_sentence.split(' ')) > self.max_sentence_length:
-                        continue
+            if len(sliced_sentence.split(' ')) > self.max_sentence_length:
+                raise NoFact
 
-                    ids, masks = preprocess_sentences_encoder(sliced_sentence, self.bert_tokenizer, self.device)
-                    model_hidden_states = self.bert(ids, attention_mask=masks).last_hidden_state  # shape (1, 16, 768)
-                    model_output = model_hidden_states[:, 0, :]  # use the CLS output: shape (1, 768)
-                    xgb_input = model_output.cpu().numpy()
+            ids, masks = preprocess_sentences_encoder(sliced_sentence, self.bert_tokenizer, self.device)
+            model_hidden_states = self.bert(ids, attention_mask=masks).last_hidden_state  # shape (1, 16, 768)
+            model_output = model_hidden_states[:, 0, :]  # use the CLS output: shape (1, 768)
+            xgb_input = model_output.cpu().numpy()
 
-                    # Computing XGB output
-                    probabilities = self.xgb.model.predict_proba(xgb_input)[0]  # shape (50)
-                    chosen_idx = np.argmax(probabilities)
-                    best_probability = probabilities[chosen_idx]
+            # Computing XGB output
+            probabilities = self.xgb.model.predict_proba(xgb_input)[0]  # shape (50)
+            chosen_idx = np.argmax(probabilities)
+            best_probability = probabilities[chosen_idx]
 
-                    if verbose:
-                        print('e1:\tmention={}\tname={}\ne2:\tmention={}\tname={}'.format(
-                            e1_dict['mention'], e1_dict['name'], e2_dict['mention'], e2_dict['name']
-                        ),
-                            'best property_name={}\tid={}\tsim={}\n\n'.format(
-                                self.relations_by_idx[chosen_idx]['name'], self.relations_by_idx[chosen_idx]['id'],
-                                best_probability
-                            )
-                        )
+            if best_probability > self.threshold:
+                return self.relations_by_idx[chosen_idx]['id']
 
-                    if best_probability > self.threshold:
-                        facts.append({
-                            'sentence': sliced_sentence,
-                            'e1_mention': e1_dict['mention'],
-                            'e1_name': e1_dict['name'],
-                            'e1_id': e1_dict['id'],
-                            'e2_mention': e2_dict['mention'],
-                            'e2_name': e2_dict['name'],
-                            'e2_id': e2_dict['id'],
-                            'property_name': self.relations_by_idx[chosen_idx]['name'],
-                            'property_id': self.relations_by_idx[chosen_idx]['id'],
-                            'probability': str(best_probability)
-                        })
-
-        return facts
+            raise NoFact
 
 
 if __name__ == '__main__':
