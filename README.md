@@ -192,6 +192,19 @@ annotated pair dataset from it:
 
      python v3.py --benchmark
 
+## Benchmark summary
+
+These results hold true for the default configuration in ```config.py```.
+
+| Version | Detections | Correct % | Correct pairs % |
+|:-------:|:----------:|:---------:|:---------------:|
+|    V0   |     459    |   0.65%   |      20.7%      |
+|    V1   |     51     |     0%    |      7.84%      |
+|    V2   |     87     |   3.45%   |      13.79%     |
+|   V2.5  |     161    |   22.36%  |      25.47%     |
+|    V3   |     698    |   3.72%   |      8.13%      |
+
+
 ## More random ideas
 
 - in the benchmark, cluster the relations and give points for being in the right cluster

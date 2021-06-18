@@ -1,5 +1,6 @@
 import json
 from models.ner import wikifier, CoreferenceResolver
+from models.filters import TypeFilter
 
 
 class NoFact(Exception):
@@ -9,8 +10,7 @@ class NoFact(Exception):
 
 class Extractor:
     """Base class for all extractor versions: extracts fact triplets from a given sentence"""
-
-    def __init__(self, n_relations=50, max_entity_pair_distance=3):
+    def __init__(self, n_relations=50, max_entity_pair_distance=3, filter=False):
         with open('wikidatavitals/data/relation_counts.json', 'r') as f:
             self.relation_counts = json.load(f)
 
@@ -24,6 +24,9 @@ class Extractor:
             self.relation_names = json.load(f)
 
         self.placeholder_relation_id = 'r_id placeholder'  # for _get_relation overriding
+        self.filter = filter
+        if filter:
+            self.TF = TypeFilter()
 
     def _get_entity_pairs_and_processed_text(self, sentence):
         # Step 1: NER
@@ -49,6 +52,11 @@ class Extractor:
 
             try:
                 r_id = self._get_relation(e1_dict, e2_dict, processed_text)
+
+                if self.filter:
+                    if not self.TF.accept(e1_dict['id'], r_id, e1_dict['id']):
+                        raise NoFact
+
                 facts.append({
                     'e1_mention': e1_dict['mention'],
                     'e1_name': e1_dict['name'],
@@ -64,11 +72,15 @@ class Extractor:
                     print('e1:\tmention={}\tname={}\ne2:\tmention={}\tname={}'.format(
                         e1_dict['mention'], e1_dict['name'], e2_dict['mention'], e2_dict['name']),
                         'relation name={}\tid={}\n\n'.format(self.relation_names[r_id], r_id))
+
             except NoFact:
                 continue
 
         return facts
 
     def _get_relation(self, e1_dict, e2_dict, processed_text):
-        """Version-dependent routine that will try to find a relation for the given entities"""
+        """
+        Version-dependent routine that will try to find a relation for the given entities
+        :return the estimated id
+        """
         return self.placeholder_relation_id  # this function needs to return something hence this return
