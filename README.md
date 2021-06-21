@@ -194,7 +194,9 @@ annotated pair dataset from it:
 
 ## Benchmark summary
 
-These results hold true for the default configuration in ```config.py```.
+These results hold true for the default configuration in ```config.py```:
+
+#### No filter
 
 | Version | Detections | Correct % | Correct pairs % |
 |:-------:|:----------:|:---------:|:---------------:|
@@ -204,6 +206,15 @@ These results hold true for the default configuration in ```config.py```.
 |   V2.5  |     161    |   22.36%  |      25.47%     |
 |    V3   |     698    |   3.72%   |      8.13%      |
 
+#### With Type Filtering
+
+| Version | Detections | Correct % | Correct pairs % |
+|:-------:|:----------:|:---------:|:---------------:|
+|    V0   |     459    |   0.65%   |      20.7%      |
+|    V1   |     51     |     0%    |      6.38%      |
+|    V2   |     81     |   3.7%    |      11.11%     |
+|   V2.5  |     152    |   23.68%  |      26.3%      |
+|    V3   |     615    |   4.23%   |      8.29%      |
 
 ## More random ideas
 

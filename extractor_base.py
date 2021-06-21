@@ -1,6 +1,7 @@
 import json
 from models.ner import wikifier, CoreferenceResolver
 from models.filters import TypeFilter
+from benchmark import FactChecker  # TODO: RM
 
 
 class NoFact(Exception):
@@ -10,7 +11,8 @@ class NoFact(Exception):
 
 class Extractor:
     """Base class for all extractor versions: extracts fact triplets from a given sentence"""
-    def __init__(self, n_relations=50, max_entity_pair_distance=3, filter=False):
+
+    def __init__(self, n_relations=50, max_entity_pair_distance=3, filter=True):
         with open('wikidatavitals/data/relation_counts.json', 'r') as f:
             self.relation_counts = json.load(f)
 
@@ -44,7 +46,7 @@ class Extractor:
 
         return entity_pairs, processed_text
 
-    def extract_facts(self, sentence, verbose=False):
+    def extract_facts(self, sentence, verbose=True):
         entity_pairs, processed_text = self._get_entity_pairs_and_processed_text(sentence)
         facts = []
         for pair_idx in range(len(entity_pairs)):
@@ -54,7 +56,7 @@ class Extractor:
                 r_id = self._get_relation(e1_dict, e2_dict, processed_text)
 
                 if self.filter:
-                    if not self.TF.accept(e1_dict['id'], r_id, e1_dict['id']):
+                    if not self.TF.accept(e1_dict['id'], r_id, e2_dict['id']):
                         raise NoFact
 
                 facts.append({

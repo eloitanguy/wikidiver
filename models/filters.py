@@ -59,6 +59,15 @@ class TypeFilter(object):
             self.relation_types = json.load(f)
 
     def accept(self, h, r, t):
-        accept_h = h in self.relation_types[r]['h'] or self.relation_types[r]['h'] == []
-        accept_t = t in self.relation_types[r]['t'] or self.relation_types[r]['t'] == []
-        return accept_h and accept_t
+        try:
+            h_types, t_types = self.entity_types[h], self.entity_types[t]
+
+            if h_types == [] or t_types == []:  # no available types so no possible filter
+                return True
+
+            accept_h = has_intersection(h_types, self.relation_types[r]['h'])
+            accept_t = has_intersection(t_types, self.relation_types[r]['t'])
+            return accept_h and accept_t
+
+        except KeyError:  # this happens if the NER step finds an entity that isn't in Wikidata-vitals: can't reject it
+            return True
