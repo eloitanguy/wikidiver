@@ -75,6 +75,25 @@ arguments of each relation. This is done with:
     python dataset_setups.py --entity-types
     python dataset_setups.py --relation-types
 
+#### Evaluating versions
+
+In order to assess the quality of the knowledge extraction, we put it to the test on the USA article: we consider a
+predicted fact correct if the fact is already present in Wikidata-vitals.
+
+The benchmark requires a setup (please also go through the general setup first!):
+
+    python benchmark.py --prepare
+
+It can then be run using (example for v1):
+
+    python v1.py --usa-benchmark
+
+This process takes 7 minutes with an RTX3090 (python allocates a lot of GPU memory but uses little GPU processing 
+power here).
+
+Another similar benchmark is the "Hundo" benchmark which does the same as the USA benchmark but with 100 random
+articles (note that these articles are randomly taken, and thus can be anywhere in a train/val split).
+
 ## V0: Giving the most popular legal relations
 
 This is a baseline that outputs the most likely relation that satisfies type constraints. A triplet is considered legal
@@ -101,22 +120,6 @@ In order to test v1 on a sentence "[sentence]", run the command:
 
 /!\ This uses a TensorFlow model (the Universal Sentence Encoder), so having a GPU available is recommended.
 
-#### Evaluate v1
-
-In order to assess the quality of the knowledge extraction, we put it to the test on the USA article: we consider a
-predicted fact correct if the fact is already present in Wikidata-vitals.
-
-The benchmark requires a setup (please also go through the general setup first!):
-
-    python benchmark.py --prepare
-
-It can then be run using:
-
-    python v1.py --benchmark
-
-This process takes 7 minutes with an RTX3090 (python allocates a lot of GPU memory but uses little GPU processing 
-power here).
-
 ## V2: train a classifier on constructed sentences
 
 Given a fact (e1, r, e2), we build a "sentence" using the entity aliases and relation verbs.
@@ -142,10 +145,6 @@ Adjust the configuration in the config file (the default value has good results 
 
     python v2.py --train
 
-#### Benchmark V2 with the USA benchmark
-
-    python v2.py --benchmark
-
 ## V2.5
 
 This model is trained using Wikipedia sentences annotated using known Wikidata facts.
@@ -167,10 +166,6 @@ It is a slight variation on the v2 idea, however preparing its dataset is extrem
 
     python v2.py --train --point-five
 
-#### Benchmark V2.5 with the USA benchmark
-
-    python v2.py --benchmark --point-five
-
 ## V3
 
 This model classifies entity pairs (i.e., a pair of word groups detected by wikifier) into relations. The word pairs
@@ -188,11 +183,7 @@ annotated pair dataset from it:
 
     python v3.py --train
 
-#### Benchmark V3 with the USA benchmark
-
-     python v3.py --benchmark
-
-## Benchmark summary
+## USA Benchmark summary
 
 These results hold true for the default configuration in ```config.py```:
 
@@ -215,6 +206,20 @@ These results hold true for the default configuration in ```config.py```:
 |    V2   |     81     |   3.7%    |      11.11%     |
 |   V2.5  |     152    |   23.68%  |      26.3%      |
 |    V3   |     615    |   4.23%   |      8.29%      |
+
+## Hundo Benchmark summary
+
+These results hold true for the default configuration in ```config.py```:
+
+#### With Type Filtering
+
+| Version | Detections | Correct % | Correct pairs % |
+|:-------:|:----------:|:---------:|:---------------:|
+|    V0   |    4826    |   0.35%   |      15.42%     |
+|    V1   |     488    |   0.2%    |      3.07%      |
+|    V2   |     1755   |   0.46%   |      2.51%      |
+|   V2.5  |     2179   |   2.52%   |      4.5%       |
+|    V3   |     12621  |   0.61%   |      2.69%      |
 
 ## More random ideas
 

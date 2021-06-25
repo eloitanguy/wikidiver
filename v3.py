@@ -6,7 +6,7 @@ import json
 import torch
 from models.encoders import PairEncoder
 import numpy as np
-from benchmark import usa_benchmark
+from benchmark import usa_benchmark, hundo_benchmark
 from v2 import train_v2
 from extractor_base import Extractor, NoFact
 
@@ -58,7 +58,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--t', '--train', action='store_true', help='Trains and saves an XGB classifier ')
     parser.add_argument('--s', '--sentence', type=str, default='', help="Sentence to extract facts from using v3")
-    parser.add_argument('--b', '--benchmark', action='store_true', help="Run the USA benchmark")
+    parser.add_argument('--u-b', '--usa-benchmark', action='store_true', help="Run the USA benchmark")
+    parser.add_argument('--h-b', '--hundo-benchmark', action='store_true', help="Run the Hundo benchmark")
     args = parser.parse_args()
 
     if args.s:
@@ -70,6 +71,10 @@ if __name__ == '__main__':
         print('Training v3 ...')
         train_v2(model_type='v3')
 
-    if args.b:
+    if args.u_b:
         v3 = V3()
         usa_benchmark(v3, V3_CONFIG)
+
+    if args.h_b:
+        v3 = V3()
+        hundo_benchmark(v3, V3_CONFIG)

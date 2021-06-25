@@ -1,6 +1,6 @@
 import json
 import argparse
-from benchmark import usa_benchmark
+from benchmark import usa_benchmark, hundo_benchmark
 from config import V0_CONFIG
 from models.filters import has_intersection
 from extractor_base import Extractor, NoFact
@@ -47,8 +47,9 @@ class V0(Extractor):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--s', '--sentence', type=str, default='', help="Sentence to extract facts from using v1")
-    parser.add_argument('--b', '--benchmark', action='store_true', help="Run the USA benchmark")
+    parser.add_argument('--s', '--sentence', type=str, default='', help="Sentence to extract facts from using v0")
+    parser.add_argument('--u-b', '--usa-benchmark', action='store_true', help="Run the USA benchmark")
+    parser.add_argument('--h-b', '--hundo-benchmark', action='store_true', help="Run the Hundo benchmark")
     args = parser.parse_args()
 
     v0 = V0()
@@ -57,5 +58,8 @@ if __name__ == '__main__':
         print('Parsing "{}" ...'.format(args.sentence))
         v0.extract_facts(args.sentence, verbose=True)
 
-    if args.b:
+    if args.u_b:
         usa_benchmark(v0, V0_CONFIG)
+
+    if args.h_b:
+        hundo_benchmark(v0, V0_CONFIG)

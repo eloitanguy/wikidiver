@@ -132,7 +132,7 @@ def benchmark_routine(extractor, config, output_name, facts_file, article_text_f
     predicted_facts, all_outputs = [], []
     print('Processing the article(s) ...')
 
-    if len(article_text_files == 1):  # USA benchmark with just one article
+    if len(article_text_files) == 1:  # USA benchmark with just one article
         with open(article_text_files[0], 'r') as f:
             paragraphs = json.load(f)
 

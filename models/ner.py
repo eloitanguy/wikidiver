@@ -112,8 +112,11 @@ def wikifier(text, threshold=0.9, grouped=True):
             mention = text[start_char:end_char+1]
             for w_idx in range(start_w, end_w+1):
                 if not annotated[w_idx]:  # remove duplicates
-                    results.append([w_idx, annotation['wikiDataItemId'], annotation['title'], mention])
-                    annotated[w_idx] = True
+                    try:
+                        results.append([w_idx, annotation['wikiDataItemId'], annotation['title'], mention])
+                        annotated[w_idx] = True
+                    except KeyError:  # in rare cases the annotation will not have a wikiDataItemId key, skip it
+                        continue
 
     return get_grouped_ner_results(results) if grouped else results
 
