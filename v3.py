@@ -45,11 +45,16 @@ class V3(Extractor):
 
         # Computing XGB output
         probabilities = self.xgb.model.predict_proba(xgb_input)[0]  # shape (50)
-        chosen_idx = np.argmax(probabilities)
-        best_probability = probabilities[chosen_idx]
 
-        if best_probability > self.threshold:
-            return self.relations_by_idx[chosen_idx]['id']
+        sorted_probabilities = np.sort(
+            np.array(
+                [(self.relations_by_idx[idx]['id'], p) for idx, p in enumerate(probabilities)],
+                dtype=[('r_id', 'U10'), ('p', float)]
+            ),
+            order='p')
+
+        if sorted_probabilities['p'][-1] > self.threshold:
+            return sorted_probabilities['r_id'][::-1].tolist()
 
         raise NoFact
 

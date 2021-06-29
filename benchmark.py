@@ -1,12 +1,13 @@
-import json
-from models.ner import wikifier, CoreferenceResolver
-import os
-import numpy as np
 import argparse
-from tqdm import tqdm
-from wikivitals.construction import save_usa_text
+import json
+import os
 import time
 from datetime import timedelta
+import numpy as np
+from tqdm import tqdm
+from models.ner import wikifier, CoreferenceResolver
+from wikivitals.construction import save_usa_text
+import matplotlib.pyplot as plt
 
 
 def save_usa_entities():
@@ -64,7 +65,7 @@ def save_hundo_entities():
         json.dump(article_files, f, indent=4)
 
 
-def save_kg_subset(entity_file, output_file):
+def save_kg_subset(entity_file, output_file, n_relations=50):
     """
     Saves to 'output_file' all the Wikidata-vitals facts
     that contain entities from the 'entity_file'.\n
@@ -72,6 +73,10 @@ def save_kg_subset(entity_file, output_file):
     - 'wikivitals/data/benchmark/usa_entities.json' from benchmark.save_usa_entities()\n
     - 'wikidatavitals/data/relations.json' from wikidatavitals.dataset.save_relations()
     """
+    with open('wikidatavitals/data/relation_counts.json', 'r') as f:
+        relation_counts = json.load(f)
+
+    relation_ids = [c[0] for c in relation_counts[:n_relations]]
     facts = []
 
     with open(entity_file, 'r') as f:
@@ -80,9 +85,9 @@ def save_kg_subset(entity_file, output_file):
     with open('wikidatavitals/data/relations.json', 'r') as f:
         relations = json.load(f)
 
-    for triplet in tqdm(relations):
-        if triplet[0] in entities and triplet[2] in entities:
-            facts.append(triplet)
+    for (h, r, t) in tqdm(relations):
+        if h in entities and t in entities and r in relation_ids:
+            facts.append([h, r, t])
 
     with open(output_file, 'w') as f:
         json.dump(facts, f)  # large and illegible -> no indent
@@ -95,6 +100,12 @@ class FactChecker(object):
 
     def check(self, triplet):
         return triplet in self.facts
+
+    def get_rank(self, e1, e2, ordered_candidate_relations):
+        for rank, r_id in enumerate(ordered_candidate_relations):
+            if [e1, r_id, e2] in self.facts:
+                return rank + 1  # ranks start at 1
+        return -1  # the true relation isn't in the candidates
 
 
 class PairChecker(object):
@@ -122,6 +133,7 @@ def hundo_benchmark(extractor, config, output_name='hundo_benchmark_results'):
 
 
 def benchmark_routine(extractor, config, output_name, facts_file, article_text_files):
+
     def paragraph_routine(_paragraph, _extractor, _all_outputs, _predicted_facts):
         output = extractor.extract_facts(_paragraph, verbose=False)
         _all_outputs.extend(output)
@@ -166,13 +178,34 @@ def benchmark_routine(extractor, config, output_name, facts_file, article_text_f
     n_correct = np.sum(success01)
     n_correct_pairs = np.sum(pair_success01)
     n_predictions = np.shape(success01)[0]
+
+    # Rank-based metrics
+    valid_ranks = []
+    for output_entry in all_outputs:
+        e1, e2, candidates = output_entry['e1_id'], output_entry['e2_id'], output_entry['ordered_candidates']
+        rank = FC.get_rank(e1, e2, candidates)
+        if rank != -1:
+            valid_ranks.append(rank)
+
+    ranks = np.array(valid_ranks).astype(float)
+
+    # Mean Reciprocal Rank
+    MRR = np.mean(ranks ** (-1))
+
     if n_predictions == 0:
         print("No predictions :(")
     else:
         print("Total predictions: {}\t correct%: {:.2f}%".format(n_predictions, 100 * n_correct / n_predictions))
         print("Total pairs: {}\t correct%: {:.2f}%".format(n_predictions, 100 * n_correct_pairs / n_predictions))
+        print("Mean Reciprocal Rank (within correct pairs): {:.2f}".format(MRR))
 
     print('Benchmark time: ', timedelta(seconds=time.time()-t0))
+
+    plt.hist(ranks, 50, density=True, facecolor='b', alpha=0.75)
+    plt.xlabel('Rank')
+    plt.ylabel('Probability')
+    plt.title('Histogram of Ranks')
+    plt.show()
 
 
 if __name__ == '__main__':

@@ -1,7 +1,6 @@
 import json
 from models.ner import wikifier, CoreferenceResolver
 from models.filters import TypeFilter
-from benchmark import FactChecker  # TODO: RM
 
 
 class NoFact(Exception):
@@ -12,7 +11,7 @@ class NoFact(Exception):
 class Extractor:
     """Base class for all extractor versions: extracts fact triplets from a given sentence"""
 
-    def __init__(self, n_relations=50, max_entity_pair_distance=3, filter=True):
+    def __init__(self, n_relations=50, max_entity_pair_distance=3, type_filter=True):
         with open('wikidatavitals/data/relation_counts.json', 'r') as f:
             self.relation_counts = json.load(f)
 
@@ -25,9 +24,9 @@ class Extractor:
         with open('wikidatavitals/data/relation_names.json', 'r') as f:
             self.relation_names = json.load(f)
 
-        self.placeholder_relation_id = 'r_id placeholder'  # for _get_relation overriding
-        self.filter = filter
-        if filter:
+        self.placeholder_relation_ids = ['r_id placeholder']  # for _get_relation overriding
+        self.filter = type_filter
+        if type_filter:
             self.TF = TypeFilter()
 
     def _get_entity_pairs_and_processed_text(self, sentence):
@@ -53,7 +52,8 @@ class Extractor:
             e1_dict, e2_dict = entity_pairs[pair_idx]['e1'], entity_pairs[pair_idx]['e2']
 
             try:
-                r_id = self._get_relation(e1_dict, e2_dict, processed_text)
+                r_ids = self._get_relation(e1_dict, e2_dict, processed_text)
+                r_id = r_ids[0]  # the output is the most likely relation
 
                 if self.filter:
                     if not self.TF.accept(e1_dict['id'], r_id, e2_dict['id']):
@@ -68,6 +68,7 @@ class Extractor:
                     'e2_id': e2_dict['id'],
                     'property_id': r_id,
                     'property_name': self.relation_names[r_id],
+                    'ordered_candidates': r_ids
                 })
 
                 if verbose:
@@ -82,7 +83,8 @@ class Extractor:
 
     def _get_relation(self, e1_dict, e2_dict, processed_text):
         """
-        Version-dependent routine that will try to find a relation for the given entities
-        :return the estimated id
+        Version-dependent routine that will try to find an ordered list of candidate relations for the given entities
+        and text \n
+        :return the estimated ids: a list of strings (relation ids) from most likely to least likely
         """
-        return self.placeholder_relation_id  # this function needs to return something hence this return
+        return self.placeholder_relation_ids  # this function needs to return something hence this return

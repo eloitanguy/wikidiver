@@ -199,13 +199,13 @@ These results hold true for the default configuration in ```config.py```:
 
 #### With Type Filtering
 
-| Version | Detections | Correct % | Correct pairs % |
-|:-------:|:----------:|:---------:|:---------------:|
-|    V0   |     459    |   0.65%   |      20.7%      |
-|    V1   |     51     |     0%    |      6.38%      |
-|    V2   |     81     |   3.7%    |      11.11%     |
-|   V2.5  |     152    |   23.68%  |      26.3%      |
-|    V3   |     615    |   4.23%   |      8.29%      |
+| Version | Detections | Correct % | Correct pairs % |  MRR  |
+|:-------:|:----------:|:---------:|:---------------:|:-----:|
+|    V0   |     459    |   0.65%   |      20.7%      | 0.296 |
+|    V1   |     51     |     0%    |      6.38%      | ---   |
+|    V2   |     81     |   3.7%    |      9.88%      | 0.477 |
+|   V2.5  |     156    |   23.72%  |      26.28%     | 0.929 |
+|    V3   |     615    |   4.35%   |      7.42%      | 0.657 |
 
 ## Hundo Benchmark summary
 

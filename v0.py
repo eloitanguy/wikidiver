@@ -40,7 +40,7 @@ class V0(Extractor):
                                    if r in legal_relations and r in self.relation_ids]
 
         if legal_relations_ordered:  # if the list is empty it means that no legal fact was found.
-            return legal_relations_ordered[0]  # most popular
+            return legal_relations_ordered  # ordered relations from most popular to least popular
 
         raise NoFact
 

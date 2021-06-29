@@ -7,6 +7,20 @@ from config import V1_CONFIG
 from extractor_base import Extractor, NoFact
 
 
+def get_unique(list_with_repetition):
+    """
+    This is a deterministic equivalent to list(set()) which conserves order
+    :param list_with_repetition: a list of objects with potential repetitions
+    :return: a list containing each element of the input only once in the order of first appearance
+    """
+
+    res = []
+    for x in list_with_repetition:
+        if x not in res:
+            res.append(x)
+    return res
+
+
 class V1(Extractor):
     """
     The configuration for this model is in 'config.py'\n
@@ -18,6 +32,7 @@ class V1(Extractor):
     similarity is higher than the similarity between [e1 ... e2] with <e1> <verb> <e2>, then we discard the fact. In
     this case we assign a similarity of -1, conveying that the similarity method would not yield good results.
     """
+
     def __init__(self):
         n_relations, max_entity_pair_distance = V1_CONFIG['n_relations'], V1_CONFIG['max_entity_pair_distance']
         super().__init__(n_relations=n_relations, max_entity_pair_distance=max_entity_pair_distance)
@@ -46,14 +61,22 @@ class V1(Extractor):
                                                       bilateral_context=self.bilateral_context)
         sims = self.comparator.compare_sentences(sliced_sentence, comparison_sentences)
         chosen_relation_idx = np.argmax(sims)
-        sim = sims[chosen_relation_idx]
 
         if self.double_check:  # censor the fact if it doesn't pass the double check test
             if chosen_relation_idx == len(comparison_sentences) - 1:  # last sentence is <e1> <e2> here
-                sim = -1
+                raise NoFact
 
-        if sim != -1 and sim > self.threshold:
-            return self.verb_idx2id[chosen_relation_idx]
+        # slice :50 for the double_check option which adds an additional test with no relation -> 51 instead of 50
+        sorted_sims = np.sort(
+            np.array(
+                [(self.verb_idx2id[idx], sim) for idx, sim in enumerate(sims[:50])],
+                dtype=[('r_id', 'U10'), ('sim', float)]
+            ),
+            order='sim')
+
+        # filtering on the output (most similar relation)
+        if sorted_sims['sim'][-1] > self.threshold:
+            return get_unique(sorted_sims['r_id'][::-1])
 
         raise NoFact
 
