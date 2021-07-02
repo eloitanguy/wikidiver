@@ -1,6 +1,7 @@
 import json
 from models.ner import wikifier, CoreferenceResolver
 from models.filters import TypeFilter
+from urllib.error import HTTPError
 
 
 class NoFact(Exception):
@@ -32,18 +33,21 @@ class Extractor:
     def _get_entity_pairs_and_processed_text(self, sentence):
         # Step 1: NER
         processed_text = self.coreference_resolver(sentence)
-        wikifier_results = wikifier(processed_text)
-
-        # creating entity pairs: only pairs (e1, e2) in order
-        # with at most 'max_entity_pair_distance - 1' entities between them
         entity_pairs = []
-        n_mentions = len(wikifier_results)
-        for e1_idx in range(n_mentions):
-            for e2_idx in range(e1_idx + 1, min(e1_idx + self.max_entity_pair_distance, n_mentions)):
-                entity_pairs.append({'e1': wikifier_results[e1_idx],
-                                     'e2': wikifier_results[e2_idx]})
 
-        return entity_pairs, processed_text
+        try:
+            wikifier_results = wikifier(processed_text)
+            # creating entity pairs: only pairs (e1, e2) in order
+            # with at most 'max_entity_pair_distance - 1' entities between them
+            n_mentions = len(wikifier_results)
+            for e1_idx in range(n_mentions):
+                for e2_idx in range(e1_idx + 1, min(e1_idx + self.max_entity_pair_distance, n_mentions)):
+                    entity_pairs.append({'e1': wikifier_results[e1_idx],
+                                         'e2': wikifier_results[e2_idx]})
+            return entity_pairs, processed_text
+
+        except HTTPError:  # rare parser failure -> no output :(
+            return entity_pairs, processed_text  # empty output
 
     def extract_facts(self, sentence, verbose=True):
         entity_pairs, processed_text = self._get_entity_pairs_and_processed_text(sentence)
