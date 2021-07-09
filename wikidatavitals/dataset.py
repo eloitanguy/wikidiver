@@ -225,3 +225,60 @@ class FactFinder(object):
                 raise FactNotFoundError  # no triplet satisfies the condition on the relation
         else:
             raise FactNotFoundError
+
+
+def save_decorated_sentence_dataset():
+    """
+    Saves to wikivitals/data/decorated_sentence_dataset.txt a dataset with sentences decorated with entities and
+    properties
+    """
+
+    def get_decorated_sentence(sentence, e1_d, e2_d, r):
+        sent_split = sentence.split(' ')
+        e1_i, e1_s, e1_e = e1_d['id'], e1_d['start_idx'], e1_d['end_idx'] + 1
+        e1_n = entity_names[e1_i]
+        e2_i, e2_s, e2_e = e2_d['id'], e2_d['start_idx'], e2_d['end_idx'] + 1
+        e2_n = entity_names[e2_i]
+        r_name = relation_names[r]
+        res_list = ['<P:' + r + ':' + r_name + '>'] + sent_split[:e1_s] + ['<E1:' + e1_i + ':' + e1_n + '>'] \
+                   + sent_split[e1_s:e1_e] + ['</E1>'] + sent_split[e1_e:e2_s] + ['<E2:' + e2_i + ':' + e2_n + '>'] + \
+                   sent_split[e2_s:e2_e] + ['</E2>'] + sent_split[e2_e:] + ['\n']
+        return ' '.join(res_list)
+
+    with open('wikivitals/data/encoded/wikified_train_sentences.json', 'r') as f:
+        wikifier_results = json.load(f)
+
+    with open('wikivitals/data/encoded/train_sentences.json', 'r') as f:
+        sentences = json.load(f)
+
+    with open('wikidatavitals/data/entity_names.json', 'r') as f:
+        entity_names = json.load(f)
+
+    with open('wikidatavitals/data/relation_names.json', 'r') as f:
+        relation_names = json.load(f)
+
+    FF = FactFinder()
+    n_sentences = min(len(wikifier_results), len(sentences))
+    decorated_sentences = []
+
+    for sentence_idx in trange(n_sentences):
+        wikifier_dicts, sent = wikifier_results[sentence_idx], sentences[sentence_idx]
+
+        # going through he entity pairs
+        for e1_idx, e1_dict in enumerate(wikifier_dicts):
+            for e2_idx, e2_dict in enumerate(wikifier_dicts):
+
+                if e1_idx == e2_idx:
+                    continue
+
+                try:
+                    _, r_id, _ = FF.get_fact(e1_dict['id'], e2_dict['id'])
+                    # We have found a fact! now we add the decorated sentence and the entity/relation names
+                    decorated_sent = get_decorated_sentence(sent, e1_dict, e2_dict, r_id)
+                    decorated_sentences.append(decorated_sent)
+
+                except FactNotFoundError:  # in this case there is no fact associated to this pair: continue
+                    continue
+
+    with open('wikivitals/data/decorated_sentence_dataset.txt', 'w') as f:
+        f.writelines(decorated_sentences)

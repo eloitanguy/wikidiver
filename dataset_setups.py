@@ -1,6 +1,6 @@
 from models.encoders import save_encoded_sentences, save_pair_dataset
 from wikidatavitals.dataset import save_relations, save_verb_idx_to_relation_list, save_property_verbs_dictionary, \
-    save_entity_dictionary, WikiDataVitalsSentences
+    save_entity_dictionary, WikiDataVitalsSentences, save_decorated_sentence_dataset
 import argparse
 from wikivitals.construction import save_all_texts
 from wikivitals.dataset import save_wikipedia_fact_dataset, WikiVitalsAnnotatedSentences, wikify_sentences
@@ -30,6 +30,8 @@ if __name__ == '__main__':
                         help='Saves all entity types in a json file')
     parser.add_argument('--rt', '--relation-types', action='store_true',
                         help='Saves all relation argument type possibilities in a json file')
+    parser.add_argument('--ds', '--decorated-sentences', action='store_true',
+                        help='Saves a dataset with sentences decorated with entities and properties')
     args = parser.parse_args()
 
     if args.enc_wd:
@@ -81,3 +83,7 @@ if __name__ == '__main__':
     if args.rt:
         print('Saving all relation argument type possibilities ...')
         save_relation_argument_types()
+
+    if args.ds:
+        print('Saving a dataset with sentences decorated with entities and properties')
+        save_decorated_sentence_dataset()
