@@ -240,9 +240,23 @@ def save_decorated_sentence_dataset():
         e2_i, e2_s, e2_e = e2_d['id'], e2_d['start_idx'], e2_d['end_idx'] + 1
         e2_n = entity_names[e2_i]
         r_name = relation_names[r]
-        res_list = ['<P:' + r + ':' + r_name + '>'] + sent_split[:e1_s] + ['<E1:' + e1_i + ':' + e1_n + '>'] \
-                   + sent_split[e1_s:e1_e] + ['</E1>'] + sent_split[e1_e:e2_s] + ['<E2:' + e2_i + ':' + e2_n + '>'] + \
-                   sent_split[e2_s:e2_e] + ['</E2>'] + sent_split[e2_e:] + ['\n']
+        e1_preamble = 'E1:' + e1_i + ':' + e1_n
+        e2_preamble = 'E2:' + e2_i + ':' + e2_n
+        r_preamble = 'P:' + r + ':' + r_name
+
+        if e1_i < e2_i:  # order e1 ... e2
+            entity_preamble = ['#' + e1_preamble, e2_preamble, r_preamble + '#']
+            middle = ['|'] + sent_split[e1_e:e2_s] + ['|'] if len(sent_split[e1_e:e2_s]) > 0 else ['||']
+
+            res_list = entity_preamble + sent_split[:e1_s] + ['|'] + sent_split[e1_s:e1_e] + middle + \
+                       sent_split[e2_e:] + ['\n']
+        else:  # order e2 ... e1
+            entity_preamble = ['#' + e2_preamble, e1_preamble, r_preamble + '#']
+            middle = ['|'] + sent_split[e2_e:e1_s] + ['|'] if len(sent_split[e2_e:e1_s]) > 0 else ['||']
+
+            res_list = entity_preamble + sent_split[:e2_s] + ['|'] + sent_split[e2_s:e2_e] + middle + \
+                       sent_split[e1_e:] + ['\n']
+
         return ' '.join(res_list)
 
     with open('wikivitals/data/encoded/wikified_train_sentences.json', 'r') as f:
