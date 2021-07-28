@@ -249,13 +249,13 @@ def save_decorated_sentence_dataset():
             middle = ['|'] + sent_split[e1_e:e2_s] + ['|'] if len(sent_split[e1_e:e2_s]) > 0 else ['||']
 
             res_list = entity_preamble + sent_split[:e1_s] + ['|'] + sent_split[e1_s:e1_e] + middle + \
-                       sent_split[e2_e:] + ['\n']
+                       sent_split[e2_s:e2_e] + ['|'] + sent_split[e2_e:] + ['\n']
         else:  # order e2 ... e1
             entity_preamble = ['#' + e2_preamble, e1_preamble, r_preamble + '#']
             middle = ['|'] + sent_split[e2_e:e1_s] + ['|'] if len(sent_split[e2_e:e1_s]) > 0 else ['||']
 
             res_list = entity_preamble + sent_split[:e2_s] + ['|'] + sent_split[e2_s:e2_e] + middle + \
-                       sent_split[e1_e:] + ['\n']
+                       sent_split[e1_s:e1_e] + ['|'] + sent_split[e1_e:] + ['\n']
 
         return ' '.join(res_list)
 
