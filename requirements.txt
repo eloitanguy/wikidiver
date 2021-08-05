@@ -17,3 +17,6 @@ tensorflow-hub~=0.12.0
 torch~=1.7.1
 transformers~=4.5.0
 xgboost~=1.4.2
+penman>=1.1.0
+cached_property
+networkx

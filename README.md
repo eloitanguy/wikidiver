@@ -22,7 +22,13 @@ In order to obtain all the dataset files, you can run the included code below or
 
 This repo uses spacy's 'en' model, please download it using:
 
-    python -m spacy download en    
+    python -m spacy download en
+
+We also use the SPRING AMR parsing in our pipeline 
+(see the [SPRING article](https://github.com/SapienzaNLP/spring/blob/main/docs/preprint.pdf)) using scripts adapted 
+directly from [the SPRING github](https://github.com/SapienzaNLP/spring). In order to make the AMR parsing scripts
+function, please download the [AMR parsing weights](http://nlp.uniroma1.it/AMR/AMR3.parsing-1.0.tar.bz2) (link from
+the SPRING github), and place the weights into ```models/spring_amr/AMR3.pt```
 
 #### Obtaining verbs
 

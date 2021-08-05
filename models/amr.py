@@ -1,5 +1,25 @@
+import os
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"  # disable annoying TF logs (TF is loader by transformers systematically)
+
+from spring_amr.penman import encode
+from spring_amr.utils import instantiate_model_and_tokenizer
+import torch
+import sys
+import os
+
+
 class NoColonError(Exception):
     pass
+
+
+class HiddenPrints:
+    def __enter__(self):
+        self._original_stdout = sys.stdout
+        sys.stdout = open(os.devnull, 'w')
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        sys.stdout.close()
+        sys.stdout = self._original_stdout
 
 
 class AMRNode:
@@ -158,10 +178,45 @@ class AMRTree:
 
         for parent_idx, list_of_children in enumerate(self.adjacency):
             if list_of_children:
-                s = s + self.nodes[parent_idx].id + '->\n'
+                s = s + self.nodes[parent_idx].id + '\n'
                 for child_link in list_of_children:
-                    s = s + '\t' + str(child_link) + '\n'
+                    s = s + '  ---> ' + str(child_link) + '\n'
         return s
 
     def __repr__(self):
         return self.__str__()
+
+
+class AMRParser:
+    """
+    Uses the SPRING AMR parsing model to parse a raw text sentence into an AMTree.
+    Code adapted from https://github.com/SapienzaNLP/spring/blob/main/bin/predict_amrs_from_plaintext.py
+    """
+    def __init__(self):
+        with HiddenPrints():  # avoid TF logs
+            model_name = 'facebook/bart-large'
+            self.model, self.tokenizer = instantiate_model_and_tokenizer(
+                model_name,
+                dropout=0.,
+                attention_dropout=0,
+                penman_linearization=True,
+                use_pointer_tokens=True,
+            )
+            self.model.load_state_dict(torch.load('models/spring_amr/AMR3.pt', map_location='cpu')['model'])
+            self.device = torch.device('cuda')
+            self.model.to(self.device)
+            self.model.eval()
+            self.model.amr_mode = True
+            self.beam_size = 3
+
+    def parse_text_to_amr(self, sentence):
+        x, _ = self.tokenizer.batch_encode_sentences((sentence,), device=self.device)
+        out = self.model.generate(**x, max_length=512, decoder_start_token_id=0, num_beams=self.beam_size)
+        graph, status, _ = self.tokenizer.decode_amr(out[0].tolist(), restore_name_ops=True)
+        graph.metadata['status'] = str(status)
+        graph.metadata['source'] = 'NA'
+        graph.metadata['nsent'] = 'NA'
+        graph.metadata['snt'] = sentence
+        penman_string = encode(graph)
+        tree = AMRTree(penman_string.split('\n'))
+        return tree
