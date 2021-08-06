@@ -214,7 +214,7 @@ def simple_benchmark(extractor, config, output_name='simple_benchmark_results'):
     with open('wikidatavitals/data/simple.json', 'r') as f:
         simple = json.load(f)
 
-    for sentence_entry in simple:
+    for sentence_entry in tqdm(simple):
         sent = sentence_entry['sentence']
         detections = extractor.extract_facts(sent, verbose=False)
         pair_correct, fact_correct = False, False
@@ -239,8 +239,8 @@ def simple_benchmark(extractor, config, output_name='simple_benchmark_results'):
             'fact_correct': fact_correct
         })
 
-    print('Correct facts: {.2f}%'.format(100 * total_fact_correct / len(simple)))
-    print('Correct pairs: {.2f}%'.format(100 * total_pair_correct / len(simple)))
+    print('Correct facts: {:.2f}%'.format(100 * total_fact_correct / len(simple)))
+    print('Correct pairs: {:.2f}%'.format(100 * total_pair_correct / len(simple)))
 
     with open(output_name + '.json', 'w') as f:
         json.dump(results, f, indent=4)

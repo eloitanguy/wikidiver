@@ -1,7 +1,8 @@
 import torch
-import sys
 import os
-import numpy as np
+
+from models.utils import find_most_similar_word_idx_interval, HiddenPrints
+
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"  # disable annoying TF logs (TF is loader by transformers systematically)
 
 from models.spring_amr.penman import encode
@@ -10,16 +11,6 @@ from models.spring_amr.utils import instantiate_model_and_tokenizer
 
 class NoColonError(Exception):
     pass
-
-
-class HiddenPrints:
-    def __enter__(self):
-        self._original_stdout = sys.stdout
-        sys.stdout = open(os.devnull, 'w')
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        sys.stdout.close()
-        sys.stdout = self._original_stdout
 
 
 class AMRNode:
@@ -71,49 +62,7 @@ class AMRLink:
         return self.__str__()
 
 
-def length_of_longest_common_subsequence(s1, s2):
-    """
-    Classic Dynamic Programming problem, finding the length of the longest common subsequence between two strings.
-    A subsequence of a string is defined as a string with characters contained in the original string in the same order.
-    For instance 'H there' is a subsequence of 'Hello there!
-    """
-    X, Y = list(s1), list(s2)
-    # LCS[i][j] is the LCS of [x1 ... xi] and [y1 ... yj] (index starts at 1 to have LCS[0] correspond to empty X)
-    LCS = np.zeros((len(s1) + 1, len(s2) + 1))
-    for i in range(1, len(X) + 1):
-        for j in range(1, len(Y) + 1):
-            if X[i - 1] != Y[j - 1]:
-                LCS[i][j] = max(LCS[i-1][j], LCS[i][j-1])
-            else:
-                LCS[i][j] = LCS[i-1][j-1] + 1
-    return int(LCS[-1][-1])
-
-
-def find_most_similar_word_idx_interval(sent, name):
-    """
-    Finds the interval of words in the sentence that best matches the 'name'. \n
-    The similarity between an interval of words and the name is given by their length of longest common subsequence. \n
-    :param sent: a sentence
-    :param name: a string referring to a portion of the sentence
-    :return: a pair (idx_1, idx2) denoting the (inclusive) indexes of the chosen word interval
-    """
-    sent_list = sent.split(' ')
-    window = len(name.split(' '))
-    best_start_idx = -1
-    best_LCS = -1
-
-    for word_idx in range(len(sent_list) - window + 1):
-        snippet = ' '.join(sent_list[word_idx:word_idx + window])
-        LCS = length_of_longest_common_subsequence(snippet, name)
-
-        if LCS > best_LCS:
-            best_start_idx = word_idx
-            best_LCS = LCS
-
-    return best_start_idx, best_start_idx + window - 1
-
-
-class AMRTree:
+class AMRGraph:
     def __init__(self, lines):
         self.nodes = []  # list of AMRNode objects
         self.adjacency = []  # The node at nodes[i] has the sons listed at adjacency[i]: list of AMRLink objects
@@ -221,7 +170,7 @@ class AMRTree:
             var.start_idx, var.end_idx = find_most_similar_word_idx_interval(self.sentence, name)
 
     def __str__(self):
-        s = 'AMRTree for sentence "{}"\n----NODES----\n'.format(self.sentence.replace('\n', ''))
+        s = 'AMRGraph for sentence "{}"\n----NODES----\n'.format(self.sentence.replace('\n', ''))
 
         for n in self.nodes:
             s = s + str(n) + '\n'
@@ -241,7 +190,7 @@ class AMRTree:
 
 class AMRParser:
     """
-    Uses the SPRING AMR parsing model to parse a raw text sentence into an AMTree.
+    Uses the SPRING AMR parsing model to parse a raw text sentence into an AMRGraph.
     Code adapted from https://github.com/SapienzaNLP/spring/blob/main/bin/predict_amrs_from_plaintext.py
     """
     def __init__(self):
@@ -270,5 +219,5 @@ class AMRParser:
         graph.metadata['nsent'] = 'NA'
         graph.metadata['snt'] = sentence
         penman_string = encode(graph)
-        tree = AMRTree(penman_string.split('\n'))
+        tree = AMRGraph(penman_string.split('\n'))
         return tree

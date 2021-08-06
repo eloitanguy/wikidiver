@@ -2,7 +2,7 @@ import json
 import argparse
 from benchmark import usa_benchmark, hundo_benchmark, simple_benchmark
 from config import V0_CONFIG
-from models.filters import has_intersection
+from models.utils import has_intersection
 from extractor_base import Extractor, NoFact
 
 

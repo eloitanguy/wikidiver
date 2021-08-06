@@ -1,7 +1,8 @@
 import json
 import os
 import random
-from models.ner import CoreferenceResolver, SentenceSplitter, wikifier
+from models.ner import CoreferenceResolver, wikifier
+from models.utils import SentenceSplitter
 from models.comparators import get_sliced_relation_mention
 from wikidatavitals.dataset import FactFinder, FactNotFoundError
 import numpy as np

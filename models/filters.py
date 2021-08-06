@@ -1,13 +1,7 @@
 import json
 from tqdm import tqdm
 
-
-def has_intersection(list1, list2):
-    return bool(list(set(list1) & set(list2)))
-
-
-def union_without_repetition(list1, list2):
-    return list(set(list1) | set(list2))
+from models.utils import has_intersection, union_without_repetition
 
 
 def save_entity_types():

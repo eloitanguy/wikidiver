@@ -28,7 +28,7 @@ def instantiate_model_and_tokenizer(
     skip_relations = False
 
     if name is None:
-        name == 'facebook/bart-base'
+        name = 'facebook/bart-base'
 
     if name == 'facebook/bart-base':
         tokenizer_name = 'facebook/bart-large'
