@@ -1,11 +1,11 @@
+import torch
+import sys
 import os
+import numpy as np
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"  # disable annoying TF logs (TF is loader by transformers systematically)
 
 from models.spring_amr.penman import encode
 from models.spring_amr.utils import instantiate_model_and_tokenizer
-import torch
-import sys
-import os
 
 
 class NoColonError(Exception):
@@ -23,7 +23,7 @@ class HiddenPrints:
 
 
 class AMRNode:
-    def __init__(self, ID, description, name=None, wiki=None, start_idx=None, end_idx=None):
+    def __init__(self, ID, description, name=None, wiki=None, start_idx=-1, end_idx=-1):
         self.id = ID
         self.description = description
         self.name = name
@@ -31,24 +31,24 @@ class AMRNode:
         self.start_idx = start_idx
         self.end_idx = end_idx
 
-    def update(self, name=None, wiki=None, start_idx=None, end_idx=None):
+    def update(self, name=None, wiki=None, start_idx=-1, end_idx=-1):
         if name:
             self.name = name
         if wiki:
             self.wiki = wiki
-        if start_idx:
+        if start_idx != -1:
             self.start_idx = start_idx
-        if end_idx:
+        if end_idx != -1:
             self.end_idx = end_idx
 
     def __str__(self):
         s = 'AMRVariable {}:\tdescription: {}'.format(self.id, self.description)
         if self.name:
-            s = s + '\tname: ' + self.name
+            s = s + '\n\tname: ' + self.name
         if self.wiki:
-            s = s + '\twiki name: ' + self.wiki
-        if self.start_idx and self.end_idx:
-            s = s + '\tbounds: ({}, {})'.format(self.start_idx, self.end_idx)
+            s = s + '\n\twiki name: ' + self.wiki
+        if self.start_idx != -1 and self.end_idx != -1:
+            s = s + '\n\tbounds: ({}, {})'.format(self.start_idx, self.end_idx)
 
         return s
 
@@ -71,6 +71,48 @@ class AMRLink:
         return self.__str__()
 
 
+def length_of_longest_common_subsequence(s1, s2):
+    """
+    Classic Dynamic Programming problem, finding the length of the longest common subsequence between two strings.
+    A subsequence of a string is defined as a string with characters contained in the original string in the same order.
+    For instance 'H there' is a subsequence of 'Hello there!
+    """
+    X, Y = list(s1), list(s2)
+    # LCS[i][j] is the LCS of [x1 ... xi] and [y1 ... yj] (index starts at 1 to have LCS[0] correspond to empty X)
+    LCS = np.zeros((len(s1) + 1, len(s2) + 1))
+    for i in range(1, len(X) + 1):
+        for j in range(1, len(Y) + 1):
+            if X[i - 1] != Y[j - 1]:
+                LCS[i][j] = max(LCS[i-1][j], LCS[i][j-1])
+            else:
+                LCS[i][j] = LCS[i-1][j-1] + 1
+    return int(LCS[-1][-1])
+
+
+def find_most_similar_word_idx_interval(sent, name):
+    """
+    Finds the interval of words in the sentence that best matches the 'name'. \n
+    The similarity between an interval of words and the name is given by their length of longest common subsequence. \n
+    :param sent: a sentence
+    :param name: a string referring to a portion of the sentence
+    :return: a pair (idx_1, idx2) denoting the (inclusive) indexes of the chosen word interval
+    """
+    sent_list = sent.split(' ')
+    window = len(name.split(' '))
+    best_start_idx = -1
+    best_LCS = -1
+
+    for word_idx in range(len(sent_list) - window + 1):
+        snippet = ' '.join(sent_list[word_idx:word_idx + window])
+        LCS = length_of_longest_common_subsequence(snippet, name)
+
+        if LCS > best_LCS:
+            best_start_idx = word_idx
+            best_LCS = LCS
+
+    return best_start_idx, best_start_idx + window - 1
+
+
 class AMRTree:
     def __init__(self, lines):
         self.nodes = []  # list of AMRNode objects
@@ -78,8 +120,8 @@ class AMRTree:
         self.sentence = lines[3][8:]
         self.current_leaf_idx = 0  # we create nodes for leaves such as ':polarity -' or ':month 6'
         self.original_text_representation = lines.copy()
-
         self._parse_lines(lines[4:])
+        self._find_word_intervals()
 
     def _parse_line(self, line):
         line = line.replace(')', '').replace('"', '').replace('\n', '')
@@ -149,7 +191,7 @@ class AMRTree:
                 # going through the next lines: if they have the same indent as the line following 'name', then they
                 # are of the form :op[n] "word" where [n] is a number and "word" is a word from the name.
                 # We note these lines as future skips and we add the words to the name.
-                while parsed_lines[potential_word_index][0] == name_indent:
+                while potential_word_index < len(parsed_lines) and parsed_lines[potential_word_index][0] == name_indent:
                     parsing_indices_to_skip.append(potential_word_index)
                     name_list.append(parsed_lines[potential_word_index][2].description)
                     potential_word_index += 1
@@ -167,6 +209,16 @@ class AMRTree:
 
                 # adding the link to the list of children of the parent in the adjacency list
                 self.adjacency[line_idx_to_node_idx[parent_idx]].append(AMRLink(op, child_node_id, child_node_idx))
+
+    def _find_word_intervals(self):
+        for var in self.nodes:
+            if var.name:
+                name = var.name
+            elif var.wiki:
+                name = var.wiki
+            else:
+                name = var.description
+            var.start_idx, var.end_idx = find_most_similar_word_idx_interval(self.sentence, name)
 
     def __str__(self):
         s = 'AMRTree for sentence "{}"\n----NODES----\n'.format(self.sentence.replace('\n', ''))
