@@ -1,0 +1,842 @@
+[
+    {
+        "sentence": "Isaac Newton worked at Cambridge University",
+        "e1": {
+            "start_idx": 0,
+            "end_idx": 1,
+            "id": "Q935",
+            "name": "Isaac Newton",
+            "mention": "Isaac Newton"
+        },
+        "r": {
+            "id": "P937",
+            "name": "work location"
+        },
+        "e2": {
+            "start_idx": 4,
+            "end_idx": 5,
+            "id": "Q35794",
+            "name": "University of Cambridge",
+            "mention": "Cambridge University"
+        }
+    },
+    {
+        "sentence": "All apples are fruits.",
+        "e1": {
+            "start_idx": 1,
+            "end_idx": 1,
+            "id": "Q89",
+            "name": "apple",
+            "mention": "apples"
+        },
+        "r": {
+            "id": "P31",
+            "name": "instance of"
+        },
+        "e2": {
+            "start_idx": 3,
+            "end_idx": 3,
+            "id": "Q1364",
+            "name": "fruit",
+            "mention": "fruits"
+        }
+    },
+    {
+        "sentence": "Andy Murray plays tennis professionally.",
+        "e1": {
+            "start_idx": 0,
+            "end_idx": 1,
+            "id": "Q10125",
+            "name": "Andy Murray",
+            "mention": "Andy Murray"
+        },
+        "r": {
+            "id": "P641",
+            "name": "sport"
+        },
+        "e2": {
+            "start_idx": 3,
+            "end_idx": 3,
+            "id": "Q847",
+            "name": "tennis",
+            "mention": "tennis"
+        }
+    },
+    {
+        "sentence": "Evariste Galois died in a pistol duel.",
+        "e1": {
+            "start_idx": 0,
+            "end_idx": 1,
+            "id": "Q7091",
+            "name": "Evariste Galois",
+            "mention": "Evariste Galois"
+        },
+        "r": {
+            "id": "P509",
+            "name": "cause of death"
+        },
+        "e2": {
+            "start_idx": 6,
+            "end_idx": 6,
+            "id": "Q191503",
+            "name": "duel",
+            "mention": "duel"
+        }
+    },
+    {
+        "sentence": "Southampton is the largest city in Hampshire.",
+        "e1": {
+            "start_idx": 0,
+            "end_idx": 0,
+            "id": "Q79848",
+            "name": "Southampton",
+            "mention": "Southampton"
+        },
+        "r": {
+            "id": "P131",
+            "name": "located in the administrative territorial entity"
+        },
+        "e2": {
+            "start_idx": 6,
+            "end_idx": 6,
+            "id": "Q23204",
+            "name": "Hampshire",
+            "mention": "Hampshire"
+        }
+    },
+    {
+        "sentence": "Paradise Lost was a source of inspiration for John Keats.",
+        "e1": {
+            "start_idx": 8,
+            "end_idx": 9,
+            "id": "Q82083",
+            "name": "John Keats",
+            "mention": "John Keats"
+        },
+        "r": {
+            "id": "P737",
+            "name": "influenced by"
+        },
+        "e2": {
+            "start_idx": 0,
+            "end_idx": 1,
+            "id": "Q28754",
+            "name": "Paradise Lost",
+            "mention": "Paradise Lost"
+        }
+    },
+    {
+        "sentence": "The Bible was originally written in Hebrew.",
+        "e1": {
+            "start_idx": 0,
+            "end_idx": 1,
+            "id": "Q1845",
+            "name": "Bible",
+            "mention": "The Bible"
+        },
+        "r": {
+            "id": "P407",
+            "name": "language of work or name"
+        },
+        "e2": {
+            "start_idx": 6,
+            "end_idx": 6,
+            "id": "Q9288",
+            "name": "Hebrew",
+            "mention": "Hebrew"
+        }
+    },
+    {
+        "sentence": "The Hundred Years' War was fought in France.",
+        "e1": {
+            "start_idx": 0,
+            "end_idx": 3,
+            "id": "Q12551",
+            "name": "The Hundred Years' War",
+            "mention": "The The Hundred Years' War"
+        },
+        "r": {
+            "id": "P276",
+            "name": "location"
+        },
+        "e2": {
+            "start_idx": 7,
+            "end_idx": 7,
+            "id": "Q142",
+            "name": "France",
+            "mention": "France"
+        }
+    },
+    {
+        "sentence": "Brazil is in South America.",
+        "e1": {
+            "start_idx": 0,
+            "end_idx": 0,
+            "id": "Q155",
+            "name": "Brazil",
+            "mention": "Brazil"
+        },
+        "r": {
+            "id": "P30",
+            "name": "continent"
+        },
+        "e2": {
+            "start_idx": 3,
+            "end_idx": 4,
+            "id": "Q18",
+            "name": "South America",
+            "mention": "South America"
+        }
+    },
+    {
+        "sentence": "John Major was a leader of the Conservative Party.",
+        "e1": {
+            "start_idx": 0,
+            "end_idx": 1,
+            "id": "Q9559",
+            "name": "John Major",
+            "mention": "John Major"
+        },
+        "r": {
+            "id": "P102",
+            "name": "political party"
+        },
+        "e2": {
+            "start_idx": 7,
+            "end_idx": 8,
+            "id": "Q9626",
+            "name": "Conservative Party",
+            "mention": "Conservative Party"
+        }
+    },
+    {
+        "sentence": "Shanghai is at the estuary of the Yangtze River.",
+        "e1": {
+            "start_idx": 0,
+            "end_idx": 0,
+            "id": "Q8686",
+            "name": "Shanghai",
+            "mention": "Shanghai"
+        },
+        "r": {
+            "id": "P206",
+            "name": "located in or next to body of water"
+        },
+        "e2": {
+            "start_idx": 6,
+            "end_idx": 8,
+            "id": "Q5413",
+            "name": "Yangtze",
+            "mention": "the Yangtze River"
+        }
+    },
+    {
+        "sentence": "Arabic is the official language of Algeria.",
+        "e1": {
+            "start_idx": 6,
+            "end_idx": 6,
+            "id": "Q13955",
+            "name": "Algeria",
+            "mention": "Algeria"
+        },
+        "r": {
+            "id": "P37",
+            "name": "official language"
+        },
+        "e2": {
+            "start_idx": 0,
+            "end_idx": 0,
+            "id": "Q262",
+            "name": "Arabic",
+            "mention": "Arabic"
+        }
+    },
+    {
+        "sentence": "J. K. Rowling is known for writing Harry Potter.",
+        "e1": {
+            "start_idx": 0,
+            "end_idx": 2,
+            "id": "Q34660",
+            "name": "J. K. Rowling",
+            "mention": "J. K. Rowling"
+        },
+        "r": {
+            "id": "P800",
+            "name": "notable work"
+        },
+        "e2": {
+            "start_idx": 7,
+            "end_idx": 8,
+            "id": "Q8337",
+            "name": "Harry Potter",
+            "mention": "Harry Potter"
+        }
+    },
+    {
+        "sentence": "Montevideo is the capital of Uruguay.",
+        "e1": {
+            "start_idx": 5,
+            "end_idx": 5,
+            "id": "Q34660",
+            "name": "Uruguay",
+            "mention": "Uruguay"
+        },
+        "r": {
+            "id": "P36",
+            "name": "capital"
+        },
+        "e2": {
+            "start_idx": 0,
+            "end_idx": 0,
+            "id": "Q1335",
+            "name": "Montevideo",
+            "mention": "Montevideo"
+        }
+    },
+    {
+        "sentence": "The novel Germinal is part of the Naturalist movement.",
+        "e1": {
+            "start_idx": 2,
+            "end_idx": 2,
+            "id": "Q137869",
+            "name": "Germinal",
+            "mention": "Germinal"
+        },
+        "r": {
+            "id": "P135",
+            "name": "movement"
+        },
+        "e2": {
+            "start_idx": 7,
+            "end_idx": 7,
+            "id": "Q55996",
+            "name": "Naturalism",
+            "mention": "Naturalist"
+        }
+    },
+    {
+        "sentence": "Roger Federer took part in Wimbledon 2021.",
+        "e1": {
+            "start_idx": 0,
+            "end_idx": 1,
+            "id": "Q1426",
+            "name": "Roger Federer",
+            "mention": "Roger Federer"
+        },
+        "r": {
+            "id": "P710",
+            "name": "participant"
+        },
+        "e2": {
+            "start_idx": 5,
+            "end_idx": 6,
+            "id": "Q41520",
+            "name": "Wimbledon Championships",
+            "mention": "Wimbledon 2021"
+        }
+    },
+    {
+        "sentence": "The city of Paris is different to the Trojan archer Paris.",
+        "e1": {
+            "start_idx": 1,
+            "end_idx": 3,
+            "id": "Q90",
+            "name": "Paris",
+            "mention": "city of Paris"
+        },
+        "r": {
+            "id": "P1889",
+            "name": "different from"
+        },
+        "e2": {
+            "start_idx": 10,
+            "end_idx": 10,
+            "id": "Q167646",
+            "name": "Paris",
+            "mention": "Paris"
+        }
+    },
+    {
+        "sentence": "Paintings by Da Vinci are kept in the Louvre.",
+        "e1": {
+            "start_idx": 2,
+            "end_idx": 3,
+            "id": "Q90",
+            "name": "Leonardo da Vinci",
+            "mention": "Da Vinci"
+        },
+        "r": {
+            "id": "P6379",
+            "name": "has works in the collection"
+        },
+        "e2": {
+            "start_idx": 10,
+            "end_idx": 10,
+            "id": "Q762",
+            "name": "Louvre Museum",
+            "mention": "Louvre"
+        }
+    },
+    {
+        "sentence": "July was named after Julius Caesar.",
+        "e1": {
+            "start_idx": 0,
+            "end_idx": 0,
+            "id": "Q121",
+            "name": "July",
+            "mention": "July"
+        },
+        "r": {
+            "id": "P138",
+            "name": "named after"
+        },
+        "e2": {
+            "start_idx": 4,
+            "end_idx": 5,
+            "id": "Q1048",
+            "name": "Julius Caesar",
+            "mention": "Julius Caesar"
+        }
+    },
+    {
+        "sentence": "Neil Armstrong was hired by NASA.",
+        "e1": {
+            "start_idx": 0,
+            "end_idx": 1,
+            "id": "Q1615",
+            "name": "Neil Armstrong",
+            "mention": "Neil Armstrong"
+        },
+        "r": {
+            "id": "P108",
+            "name": "employer"
+        },
+        "e2": {
+            "start_idx": 5,
+            "end_idx": 5,
+            "id": "Q23548",
+            "name": "NASA",
+            "mention": "NASA"
+        }
+    },
+    {
+        "sentence": "Emmy Noether was employed by Princeton University",
+        "e1": {
+            "start_idx": 0,
+            "end_idx": 1,
+            "id": "Q7099",
+            "name": "Emmy Noether",
+            "mention": "Emmy Noether"
+        },
+        "r": {
+            "id": "P937",
+            "name": "work location"
+        },
+        "e2": {
+            "start_idx": 5,
+            "end_idx": 6,
+            "id": "Q21578",
+            "name": "Princeton University",
+            "mention": "Princeton University"
+        }
+    },
+    {
+        "sentence": "Tottori is a prefecture in Japan.",
+        "e1": {
+            "start_idx": 0,
+            "end_idx": 1,
+            "id": "Q133935",
+            "name": "Tottori Prefecture",
+            "mention": "Tottori"
+        },
+        "r": {
+            "id": "P31",
+            "name": "instance of"
+        },
+        "e2": {
+            "start_idx": 3,
+            "end_idx": 3,
+            "id": "Q515716",
+            "name": "prefecture",
+            "mention": "prefecture"
+        }
+    },
+    {
+        "sentence": "Tottori is a prefecture in Japan.",
+        "e1": {
+            "start_idx": 0,
+            "end_idx": 1,
+            "id": "Q133935",
+            "name": "Tottori Prefecture",
+            "mention": "Tottori"
+        },
+        "r": {
+            "id": "P17",
+            "name": "country"
+        },
+        "e2": {
+            "start_idx": 5,
+            "end_idx": 5,
+            "id": "Q17",
+            "name": "Japan",
+            "mention": "Japan"
+        }
+    },
+    {
+        "sentence": "The city of Rennes is twinned with the city of Sendai.",
+        "e1": {
+            "start_idx": 1,
+            "end_idx": 3,
+            "id": "Q647",
+            "name": "Rennes",
+            "mention": "city of Rennes"
+        },
+        "r": {
+            "id": "P190",
+            "name": "twinned administrative body"
+        },
+        "e2": {
+            "start_idx": 8,
+            "end_idx": 10,
+            "id": "Q46747",
+            "name": "Sendai",
+            "mention": "city of Sendai"
+        }
+    },
+    {
+        "sentence": "Arundhati Roy is born in India.",
+        "e1": {
+            "start_idx": 0,
+            "end_idx": 1,
+            "id": "Q212801",
+            "name": "Arundhati Roy",
+            "mention": "Arundhati Roy"
+        },
+        "r": {
+            "id": "P495",
+            "name": "country of origin"
+        },
+        "e2": {
+            "start_idx": 5,
+            "end_idx": 5,
+            "id": "Q668",
+            "name": "India",
+            "mention": "India"
+        }
+    },
+    {
+        "sentence": "The flying fox is a bat.",
+        "e1": {
+            "start_idx": 1,
+            "end_idx": 2,
+            "id": "Q1241332",
+            "name": "Pteropus",
+            "mention": "flying fox"
+        },
+        "r": {
+            "id": "P31",
+            "name": "instance of"
+        },
+        "e2": {
+            "start_idx": 5,
+            "end_idx": 5,
+            "id": "Q28425",
+            "name": "Bat",
+            "mention": "bat"
+        }
+    },
+    {
+        "sentence": "Manaka Kataoka wrote music for The Legend of Zelda: Breath of the Wild.",
+        "e1": {
+            "start_idx": 0,
+            "end_idx": 1,
+            "id": "Q90154001",
+            "name": "Manaka Kataoka",
+            "mention": "Manaka Kataoka"
+        },
+        "r": {
+            "id": "P6379",
+            "name": "has works in the collection"
+        },
+        "e2": {
+            "start_idx": 5,
+            "end_idx": 12,
+            "id": "Q17185964",
+            "name": "The Legend of Zelda: Breath of the Wild",
+            "mention": "The Legend of Zelda: Breath of the Wild"
+        }
+    },
+    {
+        "sentence": "Massy and Palaiseau are adjacent.",
+        "e1": {
+            "start_idx": 0,
+            "end_idx": 1,
+            "id": "Q274249",
+            "name": "Massy",
+            "mention": "Massy"
+        },
+        "r": {
+            "id": "P47",
+            "name": "shares border with"
+        },
+        "e2": {
+            "start_idx": 2,
+            "end_idx": 2,
+            "id": "Q205580",
+            "name": "Palaiseau",
+            "mention": "Palaiseau"
+        }
+    },
+    {
+        "sentence": "Fabian Suchanek speaks German fluently.",
+        "e1": {
+            "start_idx": 0,
+            "end_idx": 1,
+            "id": "Q41777585",
+            "name": "Fabian Suchanek",
+            "mention": "Fabian Suchanek"
+        },
+        "r": {
+            "id": "P2936",
+            "name": "language used"
+        },
+        "e2": {
+            "start_idx": 3,
+            "end_idx": 3,
+            "id": "Q188",
+            "name": "German",
+            "mention": "German"
+        }
+    },
+    {
+        "sentence": "French is the official language of France.",
+        "e1": {
+            "start_idx": 0,
+            "end_idx": 0,
+            "id": "Q150",
+            "name": "French",
+            "mention": "French"
+        },
+        "r": {
+            "id": "P37",
+            "name": "official language"
+        },
+        "e2": {
+            "start_idx": 6,
+            "end_idx": 6,
+            "id": "Q142",
+            "name": "France",
+            "mention": "France"
+        }
+    },
+    {
+        "sentence": "Jagmeet Singh is an official of the New Democratic Party.",
+        "e1": {
+            "start_idx": 0,
+            "end_idx": 1,
+            "id": "Q6122681",
+            "name": "Jagmeet Singh",
+            "mention": "Jagmeet Singh"
+        },
+        "r": {
+            "id": "P361",
+            "name": "part of"
+        },
+        "e2": {
+            "start_idx": 7,
+            "end_idx": 9,
+            "id": "Q130765",
+            "name": "New Democratic Party",
+            "mention": "New Democratic Party"
+        }
+    },
+    {
+        "sentence": "Canada is in North America.",
+        "e1": {
+            "start_idx": 0,
+            "end_idx": 0,
+            "id": "Q16",
+            "name": "Canada",
+            "mention": "Canada"
+        },
+        "r": {
+            "id": "P30",
+            "name": "continent"
+        },
+        "e2": {
+            "start_idx": 3,
+            "end_idx": 4,
+            "id": "Q49",
+            "name": "North America",
+            "mention": "North America"
+        }
+    },
+    {
+        "sentence": "Atlantis is at the bottom of the Atlantic ocean.",
+        "e1": {
+            "start_idx": 0,
+            "end_idx": 0,
+            "id": "Q25373",
+            "name": "Atlantis",
+            "mention": "Atlantis"
+        },
+        "r": {
+            "id": "P206",
+            "name": "located in or next body of water"
+        },
+        "e2": {
+            "start_idx": 7,
+            "end_idx": 8,
+            "id": "Q97",
+            "name": "Atlantic ocean",
+            "mention": "Atlantic ocean"
+        }
+    },
+    {  
+        "sentence": "The langeleik is a drone zither.",
+        "e1": {
+            "start_idx": 1,
+            "end_idx": 1,
+            "id": "Q2744331",
+            "name": "langeleik",
+            "mention": "langeleik"
+        },
+        "r": {
+            "id": "P1303",
+            "name": "instrument"
+        },
+        "e2": {
+            "start_idx": 5,
+            "end_idx": 5,
+            "id": "Q76239",
+            "name": "zither",
+            "mention": "zither"
+        }
+    },
+    {
+        "sentence": "Saint-Malo is named after Saint Malo",
+        "e1": {
+            "start_idx": 0,
+            "end_idx": 0,
+            "id": "Q163108",
+            "name": "Saint-Malo",
+            "mention": "Saint-Malo"
+        },
+        "r": {
+            "id": "P138",
+            "name": "named after"
+        },
+        "e2": {
+            "start_idx": 4,
+            "end_idx": 5,
+            "id": "Q468195",
+            "name": "Malo",
+            "mention": "Saint Malo"
+        }
+    },
+    {
+        "sentence": "Pteropus vampyrus are animals in the Chiroptera order.",
+        "e1": {
+            "start_idx": 0,
+            "end_idx": 1,
+            "id": "Q649684",
+            "name": "Pteropus vampyrus",
+            "mention": "Pteropus vampyrus"
+        },
+        "r": {
+            "id": "P105",
+            "name": "taxon rank"
+        },
+        "e2": {
+            "start_idx": 6,
+            "end_idx": 7,
+            "id": "Q28425",
+            "name": "Chiroptera",
+            "mention": "Chiroptera order"
+        }
+    },
+    {
+        "sentence": "The Nympheas are a famous work by Claude Monet.",
+        "e1": {
+            "start_idx": 0,
+            "end_idx": 1,
+            "id": "Q20881317",
+            "name": "Nympheas",
+            "mention": "The Nympheas"
+        },
+        "r": {
+            "id": "P800",
+            "name": "notable work"
+        },
+        "e2": {
+            "start_idx": 7,
+            "end_idx": 8,
+            "id": "Q296",
+            "name": "Claude Monet",
+            "mention": "Claude Monet"
+        }
+    },
+    {
+        "sentence": "Gaëlle Solal is a french classical guitarist.",
+        "e1": {
+            "start_idx": 0,
+            "end_idx": 1,
+            "id": "Q3099898",
+            "name": "Gaëlle Solal",
+            "mention": "Gaëlle Solal"
+        },
+        "r": {
+            "id": "P101",
+            "name": "field of work"
+        },
+        "e2": {
+            "start_idx": 5,
+            "end_idx": 6,
+            "id": "Q638",
+            "name": "music",
+            "mention": "classical guitarist"
+        }
+    },
+    {
+        "sentence": "Brussels is the capital of Belgium",
+        "e1": {
+            "start_idx": 0,
+            "end_idx": 0,
+            "id": "Q239",
+            "name": "Brussels",
+            "mention": "Brussels"
+        },
+        "r": {
+            "id": "P1376",
+            "name": "capital of"
+        },
+        "e2": {
+            "start_idx": 5,
+            "end_idx": 5,
+            "id": "Q31",
+            "name": "Belgium",
+            "mention": "Belgium"
+        }
+    },
+    {
+        "sentence": "An eagle dropped a turtle on Aeschylus, killing him.",
+        "e1": {
+            "start_idx": 6,
+            "end_idx": 6,
+            "id": "Q40939",
+            "name": "Aeschylus",
+            "mention": "Aeschylus"
+        },
+        "r": {
+            "id": "P509",
+            "name": "cause of death"
+        },
+        "e2": {
+            "start_idx": 1,
+            "end_idx": 1,
+            "id": "Q2092297",
+            "name": "eagle",
+            "mention": "eagle"
+        }
+    }
+]

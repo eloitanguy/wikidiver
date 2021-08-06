@@ -2,7 +2,7 @@ from models.comparators import UniversalSentenceEncoderComparator, get_compariso
 import json
 import numpy as np
 import argparse
-from benchmark import usa_benchmark, hundo_benchmark
+from benchmark import usa_benchmark, hundo_benchmark, simple_benchmark
 from config import V1_CONFIG
 from extractor_base import Extractor, NoFact
 
@@ -86,6 +86,7 @@ if __name__ == '__main__':
     parser.add_argument('--s', '--sentence', type=str, default='', help="Sentence to extract facts from using v1")
     parser.add_argument('--u-b', '--usa-benchmark', action='store_true', help="Run the USA benchmark")
     parser.add_argument('--h-b', '--hundo-benchmark', action='store_true', help="Run the Hundo benchmark")
+    parser.add_argument('--s-b', '--simple-benchmark', action='store_true', help="Run the Simple benchmark")
     args = parser.parse_args()
 
     v1 = V1()
@@ -99,3 +100,6 @@ if __name__ == '__main__':
 
     if args.h_b:
         hundo_benchmark(v1, V1_CONFIG)
+
+    if args.s_b:
+        simple_benchmark(v1, V1_CONFIG)

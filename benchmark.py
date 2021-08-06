@@ -208,6 +208,44 @@ def benchmark_routine(extractor, config, output_name, facts_file, article_text_f
     plt.show()
 
 
+def simple_benchmark(extractor, config, output_name='simple_benchmark_results'):
+    results = [config]
+    total_fact_correct, total_pair_correct = 0, 0
+    with open('wikidatavitals/data/simple.json', 'r') as f:
+        simple = json.load(f)
+
+    for sentence_entry in simple:
+        sent = sentence_entry['sentence']
+        detections = extractor.extract_facts(sent, verbose=False)
+        pair_correct, fact_correct = False, False
+        e1, r, e2 = sentence_entry['e1']['id'], sentence_entry['r']['id'], sentence_entry['e2']['id']
+
+        for det in detections:
+            if det['e1_id'] in (e1, e2) and det['e2_id'] in (e1, e2):
+                pair_correct = True
+            if det['e1_id'] == e1 and det['property_id'] == r and det['e2_id'] == e2:
+                fact_correct = True
+
+        if pair_correct:
+            total_pair_correct += 1
+
+        if fact_correct:
+            total_fact_correct += 1
+
+        results.append({
+            'ground_truth': sentence_entry,
+            'detections': detections,
+            'pair_correct': pair_correct,
+            'fact_correct': fact_correct
+        })
+
+    print('Correct facts: {.2f}%'.format(100 * total_fact_correct / len(simple)))
+    print('Correct pairs: {.2f}%'.format(100 * total_pair_correct / len(simple)))
+
+    with open(output_name + '.json', 'w') as f:
+        json.dump(results, f, indent=4)
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--p', '--prepare', action='store_true',

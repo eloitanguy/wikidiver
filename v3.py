@@ -6,7 +6,7 @@ import json
 import torch
 from models.encoders import PairEncoder
 import numpy as np
-from benchmark import usa_benchmark, hundo_benchmark
+from benchmark import usa_benchmark, hundo_benchmark, simple_benchmark
 from v2 import train_v2
 from extractor_base import Extractor, NoFact
 
@@ -65,21 +65,24 @@ if __name__ == '__main__':
     parser.add_argument('--s', '--sentence', type=str, default='', help="Sentence to extract facts from using v3")
     parser.add_argument('--u-b', '--usa-benchmark', action='store_true', help="Run the USA benchmark")
     parser.add_argument('--h-b', '--hundo-benchmark', action='store_true', help="Run the Hundo benchmark")
+    parser.add_argument('--s-b', '--simple-benchmark', action='store_true', help="Run the Simple benchmark")
     args = parser.parse_args()
-
-    if args.s:
-        v3 = V3()
-        print('Parsing "{}" ...'.format(args.s))
-        v3.extract_facts(args.s, verbose=True)
 
     if args.t:
         print('Training v3 ...')
         train_v2(model_type='v3')
 
-    if args.u_b:
+    else:
         v3 = V3()
-        usa_benchmark(v3, V3_CONFIG)
+        if args.s:
+            print('Parsing "{}" ...'.format(args.s))
+            v3.extract_facts(args.s, verbose=True)
 
-    if args.h_b:
-        v3 = V3()
-        hundo_benchmark(v3, V3_CONFIG)
+        if args.u_b:
+            usa_benchmark(v3, V3_CONFIG)
+
+        if args.h_b:
+            hundo_benchmark(v3, V3_CONFIG)
+
+        if args.s_b:
+            simple_benchmark(v3, V3_CONFIG)

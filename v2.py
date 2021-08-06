@@ -7,7 +7,7 @@ from transformers import BertTokenizer, BertModel
 import torch
 from models.encoders import preprocess_sentences_encoder
 import numpy as np
-from benchmark import usa_benchmark, hundo_benchmark
+from benchmark import usa_benchmark, hundo_benchmark, simple_benchmark
 from extractor_base import Extractor, NoFact
 
 
@@ -89,23 +89,26 @@ if __name__ == '__main__':
     parser.add_argument('--p5', '--point-five', '--point-5', action='store_true', help='Switches to v2.5 instead of v2')
     parser.add_argument('--u-b', '--usa-benchmark', action='store_true', help="Run the USA benchmark")
     parser.add_argument('--h-b', '--hundo-benchmark', action='store_true', help="Run the Hundo benchmark")
+    parser.add_argument('--s-b', '--simple-benchmark', action='store_true', help="Run the Simple benchmark")
     args = parser.parse_args()
 
     m_type = 'v2.5' if args.p5 else 'v2'
-
-    if args.s:
-        v2 = V2(model_type=m_type)
-        print('Parsing "{}" ...'.format(args.s))
-        v2.extract_facts(args.s, verbose=True)
 
     if args.t:
         print('Training {} ...'.format(m_type))
         train_v2(model_type=m_type)
 
-    if args.u_b:
+    else:
         v2 = V2(model_type=m_type)
-        usa_benchmark(v2, v2.config)
+        if args.s:
+            print('Parsing "{}" ...'.format(args.s))
+            v2.extract_facts(args.s, verbose=True)
 
-    if args.h_b:
-        v2 = V2(model_type=m_type)
-        hundo_benchmark(v2, v2.config)
+        if args.u_b:
+            usa_benchmark(v2, v2.config)
+
+        if args.h_b:
+            hundo_benchmark(v2, v2.config)
+
+        if args.s_b:
+            simple_benchmark(v2, V2_CONFIG)
