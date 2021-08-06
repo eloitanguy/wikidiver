@@ -9,9 +9,9 @@ from dataclasses import dataclass
 import networkx as nx
 import penman
 
+
 @dataclass
 class SemanticGraph:
-
     nodes_var: List[str]
     """
     List of linearized nodes, with special tokens.
@@ -62,27 +62,27 @@ class BaseLinearizer(metaclass=abc.ABCMeta):
     def linearize(self, *args, **kwargs) -> SemanticGraph:
         pass
 
-class AMRTokens:
 
+class AMRTokens:
     START, END = '<', '>'
     _TEMPL = START + '{}' + END
 
-    BOS_N   = _TEMPL.format('s')
-    EOS_N   = _TEMPL.format('/s')
+    BOS_N = _TEMPL.format('s')
+    EOS_N = _TEMPL.format('/s')
     START_N = _TEMPL.format('start')
-    STOP_N  = _TEMPL.format('stop')
-    PNTR_N  = _TEMPL.format('pointer')
+    STOP_N = _TEMPL.format('stop')
+    PNTR_N = _TEMPL.format('pointer')
 
-    LIT_START = _TEMPL.format( 'lit')
-    LIT_END   = _TEMPL.format('/lit')
+    LIT_START = _TEMPL.format('lit')
+    LIT_END = _TEMPL.format('/lit')
 
     BACKR_SRC_N = _TEMPL.format('backr:src:XXX')
     BACKR_TRG_N = _TEMPL.format('backr:trg:XXX')
 
-    BOS_E   = _TEMPL.format('s')
-    EOS_E   = _TEMPL.format('/s')
+    BOS_E = _TEMPL.format('s')
+    EOS_E = _TEMPL.format('/s')
     START_E = _TEMPL.format('start')
-    STOP_E  = _TEMPL.format('stop')
+    STOP_E = _TEMPL.format('stop')
 
     _FIXED_SPECIAL_TOKENS_N = {
         BOS_N, EOS_N, START_N, STOP_N}
@@ -128,6 +128,7 @@ def index_default(
         stop = len(list_)
     return next((i for i, x in enumerate(list_[start:stop], start=start) if x == item), default)
 
+
 class AMRLinearizer(BaseLinearizer):
 
     def __init__(
@@ -165,7 +166,6 @@ class AMRLinearizer(BaseLinearizer):
         amr_ = penman.Graph(triples)
         amr_.metadata = amr.metadata
         return amr_
-
 
     def linearize(self, amr: penman.Graph) -> SemanticGraph:
         if self.collapse_name_ops:
@@ -286,7 +286,8 @@ class AMRLinearizer(BaseLinearizer):
                         # 1) not already in Q
                         # 2) has children
                         # 3) the edge right before its expansion has been encountered
-                        if (node2 not in added_to_queue) and list(graph.successors(node2)) and (nx.get_node_attributes(graph, 'expansion')[node2] <= order):
+                        if (node2 not in added_to_queue) and list(graph.successors(node2)) and (
+                                nx.get_node_attributes(graph, 'expansion')[node2] <= order):
                             queue.append(node2)
                             added_to_queue.add(node2)
 
@@ -328,7 +329,7 @@ class AMRLinearizer(BaseLinearizer):
         start_i = 1
         end_i = index_default(AMRTokens.STOP_N, graph.nodes_var, start_i, -1, -1)
 
-        def add_node(node, backr = None):
+        def add_node(node, backr=None):
             old_n_node = len(new_backreferences_map)
             new_n_node = len(new_nodes)
 
@@ -354,9 +355,9 @@ class AMRLinearizer(BaseLinearizer):
             add_node(graph.nodes_var[start_i], graph.backreferences[start_i])
 
             # edges and trg nodes, interleaved
-            nodes = graph.nodes_var[start_i+1:end_i]
-            edges = graph.edges[start_i+1:end_i]
-            backr = graph.backreferences[start_i+1:end_i]
+            nodes = graph.nodes_var[start_i + 1:end_i]
+            edges = graph.edges[start_i + 1:end_i]
+            backr = graph.backreferences[start_i + 1:end_i]
             for n, e, b in zip(nodes, edges, backr):
                 add_edge(e)
                 add_node(n, b)

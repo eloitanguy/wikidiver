@@ -7,9 +7,9 @@ import torch
 from torch import Tensor
 from torch import nn
 from torch.nn import functional as F
-import spring_amr.legacy_modeling_bart as bart
-from spring_amr.transformers_deprecated import calc_banned_ngram_tokens, calc_banned_bad_words_ids, \
-    top_k_top_p_filtering, BartConfig, LearnedPositionalEmbedding, BeamHypotheses
+import models.spring_amr.legacy_modeling_bart as bart
+from models.spring_amr.transformers_deprecated import calc_banned_ngram_tokens, calc_banned_bad_words_ids, \
+    top_k_top_p_filtering, BartConfig, BeamHypotheses
 
 
 def extract_backreferences(ids, num_embeddings, backpointer_idx):

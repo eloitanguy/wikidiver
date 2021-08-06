@@ -1,5 +1,6 @@
 from collections import defaultdict
 
+
 def read_entities(sentences, graphs, just_tagged=True):
 
     for i, (s, g) in enumerate(zip(sentences, graphs)):

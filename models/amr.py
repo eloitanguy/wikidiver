@@ -1,8 +1,8 @@
 import os
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"  # disable annoying TF logs (TF is loader by transformers systematically)
 
-from spring_amr.penman import encode
-from spring_amr.utils import instantiate_model_and_tokenizer
+from models.spring_amr.penman import encode
+from models.spring_amr.utils import instantiate_model_and_tokenizer
 import torch
 import sys
 import os
@@ -209,7 +209,7 @@ class AMRParser:
             self.model.amr_mode = True
             self.beam_size = 3
 
-    def parse_text_to_amr(self, sentence):
+    def parse_text(self, sentence):
         x, _ = self.tokenizer.batch_encode_sentences((sentence,), device=self.device)
         out = self.model.generate(**x, max_length=512, decoder_start_token_id=0, num_beams=self.beam_size)
         graph, status, _ = self.tokenizer.decode_amr(out[0].tolist(), restore_name_ops=True)

@@ -24,7 +24,7 @@ import torch.nn.functional as F
 from torch import Tensor, nn
 
 from transformers.activations import ACT2FN
-from spring_amr.transformers_deprecated import BartConfig, PreTrainedModel
+from models.spring_amr.transformers_deprecated import BartConfig, PreTrainedModel
 from transformers.file_utils import add_start_docstrings
 
 

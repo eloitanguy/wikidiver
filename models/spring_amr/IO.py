@@ -1,7 +1,8 @@
 import glob
 from typing import List, Union, Iterable
 from pathlib import Path
-from spring_amr.penman import load as pm_load
+from models.spring_amr.penman import load as pm_load
+
 
 def read_raw_amr_data(
         paths: List[Union[str, Path]],

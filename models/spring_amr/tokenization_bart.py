@@ -7,9 +7,9 @@ import regex as re
 import torch
 from transformers import BartTokenizer
 
-from spring_amr import postprocessing
-from spring_amr.linearization import AMRTokens, AMRLinearizer
-from spring_amr.penman import encode
+from models.spring_amr import postprocessing
+from models.spring_amr.linearization import AMRTokens, AMRLinearizer
+from models.spring_amr.penman import encode
 
 
 class AMRBartTokenizer(BartTokenizer):

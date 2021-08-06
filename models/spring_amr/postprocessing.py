@@ -5,14 +5,15 @@ import re
 import networkx as nx
 import penman
 
-from spring_amr.penman import encode
+from models.spring_amr.penman import encode
 
-from spring_amr.linearization import AMRTokens
+from models.spring_amr.linearization import AMRTokens
 
 BACKOFF = penman.Graph([
     penman.Triple('d2', ':instance', 'dog'),
     penman.Triple('b1', ':instance', 'bark-01'),
-    penman.Triple('b1', ':ARG0', 'd2'),])
+    penman.Triple('b1', ':ARG0', 'd2'), ])
+
 
 def token_processing(tok):
     if tok is None:
@@ -28,6 +29,7 @@ def token_processing(tok):
         return '"' + tok
     else:
         return tok
+
 
 def decode_into_node_and_backreferences(subtoken_ids, tokenizer):
     rex_arg = re.compile(f"^{tokenizer.INIT}(op|snt|conj|prep)")
@@ -79,7 +81,8 @@ def decode_into_node_and_backreferences(subtoken_ids, tokenizer):
             current_token_i += 1
 
         # very ugly patch for some cases in which tokenizer.INIT is not in the following token to the edge
-        elif isinstance(tokens[-1], str) and tokens[-1].startswith(':') and tokens[-1][-1].isdigit() and (subtok != '-of'):
+        elif isinstance(tokens[-1], str) and tokens[-1].startswith(':') and tokens[-1][-1].isdigit() and (
+                subtok != '-of'):
             tokens.append(subtok.lstrip(tokenizer.INIT))
             backreferences.append(-1)
             current_token_i += 1
@@ -129,7 +132,7 @@ def decode_into_node_and_backreferences(subtoken_ids, tokenizer):
                         token_to_token_map[i] = len(tokens)
 
                     # Remove possible wrong None
-                    res = old_tokens[lit_start+1:lit_end]
+                    res = old_tokens[lit_start + 1:lit_end]
                     res = [str(r) for r in res if r is not None]
                     res = '"' + '_'.join(res) + '"'
 
@@ -145,7 +148,7 @@ def decode_into_node_and_backreferences(subtoken_ids, tokenizer):
                         token_to_token_map[i] = len(tokens)
 
                     # Remove possible wrong None
-                    res = old_tokens[lit_start+1:lit_end]
+                    res = old_tokens[lit_start + 1:lit_end]
                     res = [str(r) for r in res if r is not None]
                     res = '"' + '_'.join(res) + '"'
 
@@ -229,6 +232,7 @@ def separate_edges_nodes(edges_nodes_slice, *other):
         ret.append((edges_oth, nodes_oth))
     return ret
 
+
 def _split_name_ops(graph):
     # identify name triples
     name_vars = {}
@@ -265,6 +269,7 @@ def _split_name_ops(graph):
     graph_.metadata = graph.metadata
     return graph_
 
+
 def _reconstruct_graph_from_nodes(nodes, backreferences):
     triples = []
     triples_added = set()
@@ -300,7 +305,7 @@ def _reconstruct_graph_from_nodes(nodes, backreferences):
             src_var = src_node[0].lower()
             if not src_var not in 'abcdefghijklmnopqrstuvwxyz':
                 src_var = 'x'
-            #src_var = f'{src_var}_{len(variable2index)}'
+            # src_var = f'{src_var}_{len(variable2index)}'
             src_var = f'{src_var}{len(variable2index)}'
             src_var_i = old_start_index
             variable2index[src_var] = src_var_i
@@ -338,7 +343,7 @@ def _reconstruct_graph_from_nodes(nodes, backreferences):
 
                 if e.startswith(':op') or e.startswith(':snt'):
                     continue
-                #elif e.startswith(':ARG'):
+                # elif e.startswith(':ARG'):
                 #    continue
                 elif num > 3:
                     continue
@@ -358,13 +363,14 @@ def _reconstruct_graph_from_nodes(nodes, backreferences):
                 trg = f'"{n}"'
             elif n == '"':
                 continue
-            elif (n.startswith('"') and (not n.endswith('"'))) or (not n.startswith('"') and (n.endswith('"'))) or ('"' in n):
+            elif (n.startswith('"') and (not n.endswith('"'))) or (not n.startswith('"') and (n.endswith('"'))) or (
+                    '"' in n):
                 trg = '"' + n.replace('"', '') + '"'
             else:
                 trg_var = n[0].lower()
                 if trg_var not in 'abcdefghijklmnopqrstuvwxyz':
                     trg_var = 'x'
-                #trg_var = f'{trg_var}_{len(variable2index)}'
+                # trg_var = f'{trg_var}_{len(variable2index)}'
                 trg_var = f'{trg_var}{len(variable2index)}'
                 trg_var_i = ni
                 variable2index[trg_var] = trg_var_i
@@ -384,19 +390,21 @@ def _reconstruct_graph_from_nodes(nodes, backreferences):
 
     return penman.Graph(triples)
 
+
 def build_graph(nodes, backreferences, restore_name_ops=False):
     graph = _reconstruct_graph_from_nodes(nodes, backreferences)
     if restore_name_ops:
         graph = _split_name_ops(graph)
     return graph
 
+
 class ParsedStatus(enum.Enum):
     OK = 0
     FIXED = 1
     BACKOFF = 2
 
-def connect_graph_if_not_connected(graph):
 
+def connect_graph_if_not_connected(graph):
     try:
         encoded = encode(graph)
         return graph, ParsedStatus.OK
@@ -428,6 +436,7 @@ def connect_graph_if_not_connected(graph):
     encode(graph)
 
     return graph, ParsedStatus.FIXED
+
 
 def restore_backreferences_from_pointers(nodes):
     new_nodes, new_backreferences = [], []

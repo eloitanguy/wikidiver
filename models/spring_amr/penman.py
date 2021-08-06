@@ -10,16 +10,17 @@ noop_model = NoOpModel()
 amr_model = amr.model
 DEFAULT = op_model
 
+
 def _get_model(dereify):
     if dereify is None:
         return DEFAULT
-
 
     elif dereify:
         return op_model
 
     else:
         return noop_model
+
 
 def _remove_wiki(graph):
     metadata = graph.metadata
@@ -33,6 +34,7 @@ def _remove_wiki(graph):
     graph.metadata = metadata
     return graph
 
+
 def load(source, dereify=None, remove_wiki=False):
     model = _get_model(dereify)
     out = load_(source=source, model=model)
@@ -41,6 +43,7 @@ def load(source, dereify=None, remove_wiki=False):
             out[i] = _remove_wiki(out[i])
     return out
 
+
 def loads(string, dereify=None, remove_wiki=False):
     model = _get_model(dereify)
     out = loads_(string=string, model=model)
@@ -48,6 +51,7 @@ def loads(string, dereify=None, remove_wiki=False):
         for i in range(len(out)):
             out[i] = _remove_wiki(out[i])
     return out
+
 
 def encode(g, top=None, indent=-1, compact=False):
     model = amr_model

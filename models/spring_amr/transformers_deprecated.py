@@ -11,7 +11,7 @@ from transformers.modeling_utils import ModuleUtilsMixin, device
 from typing import Callable, Dict, Iterable, List, Optional, Tuple
 
 import os
-from spring_amr.legacy_file_utils import (
+from models.spring_amr.legacy_file_utils import (
     DUMMY_INPUTS,
     TF2_WEIGHTS_NAME,
     TF_WEIGHTS_NAME,
