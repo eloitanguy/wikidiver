@@ -75,6 +75,10 @@ class AMRLink:
         return self.__str__()
 
 
+def is_entity(z: AMRNode):
+    return z.ner is not None
+
+
 class AMRGraph:
     def __init__(self, lines):
         self.nodes = []  # list of AMRNode objects
@@ -182,6 +186,9 @@ class AMRGraph:
                 name = var.description
             var.start_idx, var.end_idx = find_most_similar_word_idx_interval(self.sentence, name)
 
+    def ner_results(self):
+        return [var.ner for var in self.nodes if var.ner]
+
     def __str__(self):
         s = 'AMRGraph for sentence "{}"\n----NODES----\n'.format(self.sentence.replace('\n', ''))
 
@@ -248,7 +255,7 @@ class AMRParser:
 
         raise NoEntity
 
-    def _get_var_results(self, var, sentence):
+    def _get_entity_from_var(self, var, sentence):
         if var.start_idx == -1 or var.end_idx == -1:  # should never happen but in that case the var is unusable
             return {}
         if var.name:
@@ -258,6 +265,8 @@ class AMRParser:
         else:
             name = var.description
             if '-' in name:  # an AMR description with a '-' is a verb and thus unlikely to be an entity -> skip
+                return {}
+            if len(name) < 4:  # too short: could be an acronym of a pronoun -> skip
                 return {}
 
         try:
@@ -283,18 +292,16 @@ class AMRParser:
         graph.metadata['snt'] = sentence
         penman_string = encode(graph)
         g = AMRGraph(penman_string.split('\n'))
-        ner_results = []
 
         if NER:
             workers = mp.cpu_count()
             pool = Pool(workers)
-            results_by_var = pool.starmap(self._get_var_results, [(var, sentence) for var in g.nodes])
+            results_by_var = pool.starmap(self._get_entity_from_var, [(var, sentence) for var in g.nodes])
 
             for var_idx, var in enumerate(g.nodes):  # update node information
                 ner = results_by_var[var_idx]
                 if ner != {}:
                     var.update(ner=ner)
             pool.close()
-            ner_results = [var_res for var_res in results_by_var if var_res != {}]
 
-        return g, ner_results
+        return g
