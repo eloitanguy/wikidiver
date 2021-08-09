@@ -1,7 +1,11 @@
 import torch
 import os
 
-from models.utils import find_most_similar_word_idx_interval, HiddenPrints
+from models.utils import find_most_similar_word_idx_interval, HiddenPrints, length_of_longest_common_subsequence
+import multiprocessing as mp
+from multiprocessing.dummy import Pool
+from config import AMR_CONFIG
+import json
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"  # disable annoying TF logs (TF is loader by transformers systematically)
 
@@ -13,16 +17,21 @@ class NoColonError(Exception):
     pass
 
 
+class NoEntity(Exception):
+    pass
+
+
 class AMRNode:
-    def __init__(self, ID, description, name=None, wiki=None, start_idx=-1, end_idx=-1):
+    def __init__(self, ID, description, name=None, wiki=None, ner=None, start_idx=-1, end_idx=-1):
         self.id = ID
         self.description = description
         self.name = name
         self.wiki = wiki
         self.start_idx = start_idx
         self.end_idx = end_idx
+        self.ner = ner
 
-    def update(self, name=None, wiki=None, start_idx=-1, end_idx=-1):
+    def update(self, name=None, wiki=None, ner=None, start_idx=-1, end_idx=-1):
         if name:
             self.name = name
         if wiki:
@@ -31,6 +40,8 @@ class AMRNode:
             self.start_idx = start_idx
         if end_idx != -1:
             self.end_idx = end_idx
+        if ner:
+            self.ner = ner
 
     def __str__(self):
         s = 'AMRVariable {}:\tdescription: {}'.format(self.id, self.description)
@@ -40,6 +51,8 @@ class AMRNode:
             s = s + '\n\twiki name: ' + self.wiki
         if self.start_idx != -1 and self.end_idx != -1:
             s = s + '\n\tbounds: ({}, {})'.format(self.start_idx, self.end_idx)
+        if self.ner:
+            s = s + '\n\tNER: name={}, mention={}, ID={}'.format(self.ner['name'], self.ner['mention'], self.ner['id'])
 
         return s
 
@@ -193,7 +206,7 @@ class AMRParser:
     Uses the SPRING AMR parsing model to parse a raw text sentence into an AMRGraph.
     Code adapted from https://github.com/SapienzaNLP/spring/blob/main/bin/predict_amrs_from_plaintext.py
     """
-    def __init__(self):
+    def __init__(self, config=AMR_CONFIG):
         with HiddenPrints():  # avoid TF logs
             model_name = 'facebook/bart-large'
             self.model, self.tokenizer = instantiate_model_and_tokenizer(
@@ -208,9 +221,59 @@ class AMRParser:
             self.model.to(self.device)
             self.model.eval()
             self.model.amr_mode = True
-            self.beam_size = 3
+            self.beam_size = config['beam_size']
+            self.entity_threshold = config['entity_threshold']
+            self.n_aliases = config['n_aliases']
 
-    def parse_text(self, sentence):
+            with open('wikidatavitals/data/entity_aliases.json', 'r') as f:
+                self.entity_aliases = json.load(f)
+
+    @staticmethod
+    def _try_alias(snippet, alias):
+        return len(snippet) < 3 * len(alias) and len(alias) < 3 * len(snippet)  # none 3x bigger
+
+    def _find_entity(self, snippet):
+        best_LCS = -1
+        length_of_best = 99999
+
+        for entity_id, aliases in self.entity_aliases.items():
+            for alias in aliases[:self.n_aliases]:
+                if self._try_alias(snippet, alias):
+                    LCS = length_of_longest_common_subsequence(snippet, alias)
+
+                    if LCS > best_LCS or (LCS == best_LCS and len(alias) < length_of_best):
+                        best_LCS, best_id, length_of_best = LCS, entity_id, len(alias)
+                        if best_LCS / max(length_of_best, len(snippet)) > self.entity_threshold:
+                            return best_id
+
+        raise NoEntity
+
+    def _get_var_results(self, var, sentence):
+        if var.start_idx == -1 or var.end_idx == -1:  # should never happen but in that case the var is unusable
+            return {}
+        if var.name:
+            name = var.name
+        elif var.wiki:
+            name = var.wiki
+        else:
+            name = var.description
+            if '-' in name:  # an AMR description with a '-' is a verb and thus unlikely to be an entity -> skip
+                return {}
+
+        try:
+            entity_id = self._find_entity(name)
+        except NoEntity:
+            return {}
+
+        return {
+            'start_idx': var.start_idx,
+            'end_idx': var.end_idx,
+            'id': entity_id,
+            'name': self.entity_aliases[entity_id][0],  # the first alias is the Wikidata entity name
+            'mention': ' '.join(sentence.split(' ')[var.start_idx:var.end_idx + 1])
+        }
+
+    def parse_text(self, sentence, NER=True):
         x, _ = self.tokenizer.batch_encode_sentences((sentence,), device=self.device)
         out = self.model.generate(**x, max_length=512, decoder_start_token_id=0, num_beams=self.beam_size)
         graph, status, _ = self.tokenizer.decode_amr(out[0].tolist(), restore_name_ops=True)
@@ -219,5 +282,19 @@ class AMRParser:
         graph.metadata['nsent'] = 'NA'
         graph.metadata['snt'] = sentence
         penman_string = encode(graph)
-        tree = AMRGraph(penman_string.split('\n'))
-        return tree
+        g = AMRGraph(penman_string.split('\n'))
+        ner_results = []
+
+        if NER:
+            workers = mp.cpu_count()
+            pool = Pool(workers)
+            results_by_var = pool.starmap(self._get_var_results, [(var, sentence) for var in g.nodes])
+
+            for var_idx, var in enumerate(g.nodes):  # update node information
+                ner = results_by_var[var_idx]
+                if ner != {}:
+                    var.update(ner=ner)
+            pool.close()
+            ner_results = [var_res for var_res in results_by_var if var_res != {}]
+
+        return g, ner_results

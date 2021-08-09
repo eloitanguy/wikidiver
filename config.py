@@ -57,3 +57,9 @@ V3_CONFIG = {
     'threshold': 0.1,
     'max_sentence_length': 12
 }
+
+AMR_CONFIG = {
+    'beam_size': 3,
+    'entity_threshold': 0.8,
+    'n_aliases': 3
+}

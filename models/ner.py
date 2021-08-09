@@ -5,15 +5,7 @@ import neuralcoref
 import urllib
 import json
 
-from models.utils import character_idx_to_word_idx, length_of_longest_common_subsequence
-from models.amr import AMRParser
-
-import multiprocessing as mp
-from multiprocessing.dummy import Pool
-
-
-class NoEntity(Exception):
-    pass
+from models.utils import character_idx_to_word_idx
 
 
 class CoreferenceResolver(object):
@@ -141,66 +133,3 @@ def get_grouped_ner_results(result_list):
                 'mention': result_list[-1][3]})
 
     return res
-
-
-class NERParserAMR:
-    def __init__(self, threshold=0.8, n_aliases=3):
-        self.amr_parser = AMRParser()
-        self.threshold = threshold
-        self.n_aliases = n_aliases
-
-        with open('wikidatavitals/data/entity_aliases.json', 'r') as f:
-            self.entity_aliases = json.load(f)
-
-    @staticmethod
-    def _try_alias(snippet, alias):
-        return len(snippet) < 3 * len(alias) and len(alias) < 3 * len(snippet)  # none 3x bigger
-
-    def _find_entity(self, snippet):
-        best_LCS = -1
-        length_of_best = 99999
-
-        for entity_id, aliases in self.entity_aliases.items():
-            for alias in aliases[:self.n_aliases]:
-                if self._try_alias(snippet, alias):
-                    LCS = length_of_longest_common_subsequence(snippet, alias)
-
-                    if LCS > best_LCS or (LCS == best_LCS and len(alias) < length_of_best):
-                        best_LCS, best_id, length_of_best = LCS, entity_id, len(alias)
-                        if best_LCS / max(length_of_best, len(snippet)) > self.threshold:
-                            return best_id
-
-        raise NoEntity
-
-    def _get_var_results(self, var, sentence):
-        if var.start_idx == -1 or var.end_idx == -1:  # should never happen but in that case the var is unusable
-            return {}
-        if var.name:
-            name = var.name
-        elif var.wiki:
-            name = var.wiki
-        else:
-            name = var.description
-            if '-' in name:  # an AMR description with a '-' is a verb and thus unlikely to be an entity -> skip
-                return {}
-
-        try:
-            entity_id = self._find_entity(name)
-        except NoEntity:
-            return {}
-
-        return {
-            'start_idx': var.start_idx,
-            'end_idx': var.end_idx,
-            'id': entity_id,
-            'name': self.entity_aliases[entity_id][0],  # the first alias is the Wikidata entity name
-            'mention': ' '.join(sentence.split(' ')[var.start_idx:var.end_idx + 1])
-        }
-
-    def wikify(self, sentence):
-        g = self.amr_parser.parse_text(sentence)
-        workers = mp.cpu_count()
-        pool = Pool(workers)
-        results_by_var = pool.starmap(self._get_var_results, [(var, sentence) for var in g.nodes])
-        pool.close()
-        return [var_res for var_res in results_by_var if var_res != {}]
