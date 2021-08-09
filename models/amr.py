@@ -12,12 +12,21 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"  # disable annoying TF logs (TF is load
 from models.spring_amr.penman import encode
 from models.spring_amr.utils import instantiate_model_and_tokenizer
 
+NO_NEIGHBOUR_PAIRS_WITH_THESE_OPERATORS = ['op1', 'op2', 'op3', 'op4', 'op5', 'ARG1', 'ARG2', 'ARG3', ':RG4', 'ARG5',
+                                           'ARG6', 'ARG7', 'ARG8', 'ARG9', 'ARG10', 'ARG11', 'ARG12', 'ARG13', 'ARG14',
+                                           'ARG15', 'ARG16', 'ARG17', 'ARG18', 'ARG19', 'ARG20'
+                                           ]
+
 
 class NoColonError(Exception):
     pass
 
 
 class NoEntity(Exception):
+    pass
+
+
+class NoPath(Exception):
     pass
 
 
@@ -75,8 +84,27 @@ class AMRLink:
         return self.__str__()
 
 
-def is_entity(z: AMRNode):
-    return z.ner is not None
+def is_entity(z: AMRNode, g):
+    if z.ner is not None:
+        return True
+
+    # We must check whether z is a leaf referring to an entity variable
+    if z.id[0] == 'l':  # all leaves start with l
+        if z.description in g.node_id_to_idx:  # in this case z is indeed a variable leaf
+            return g.nodes[g.node_id_to_idx[z.description]].ner is not None  # check if the associated var is an entity
+
+    return False
+
+
+def refers_to(l: AMRNode, z: AMRNode):
+    """
+    Returns True iff l is a leaf referring to the variable z in their AMR graph.
+    """
+    return l.id[0] == 'l' and l.description == z.id
+
+
+def is_verb(z: AMRNode):
+    return '-' in z.description and 'entity' not in z.description
 
 
 class AMRGraph:
@@ -88,6 +116,7 @@ class AMRGraph:
         self.original_text_representation = lines.copy()
         self._parse_lines(lines[4:])
         self._find_word_intervals()
+        self.node_id_to_idx = {node.id: idx for (idx, node) in enumerate(self.nodes)}
 
     def _parse_line(self, line):
         line = line.replace(')', '').replace('"', '').replace('\n', '')
@@ -143,7 +172,7 @@ class AMRGraph:
             while parsed_lines[parent_idx][0] >= current_indent:  # we look for the parent index
                 parent_idx -= 1
 
-            # at this point parent_idx IS the parent index
+            # at this point 'parent_idx' IS the parent index
             op, child_node = parsed_lines[parsing_idx][1], parsed_lines[parsing_idx][2]
 
             # if op in ['name', 'wiki'], the child node is just information on the parent node:
@@ -208,11 +237,128 @@ class AMRGraph:
         return self.__str__()
 
 
+def find_path_between(start_node_idx, end_node_idx, g: AMRGraph):
+    """
+    Returns a path from start_node_idx of the AMR tree g to end_node_idx.\n
+    The only rule from suggest_entity_pairs that we follow is about the polarity, the others are checked later.\n
+    :return: the path: list of (AMRNode, AMRLink), [] if they are the same or raise NoPath if there is no path.
+    """
+    subtree_root = g.nodes[start_node_idx]
+    if not g.adjacency[start_node_idx]:  # if there are no children, we need to check whether they are the same.
+        if start_node_idx == end_node_idx:
+            return [subtree_root, None]
+        else:
+            raise NoPath
+
+    for link in g.adjacency[start_node_idx]:
+        if link.op == 'polarity':  # no negative facts so we forbid negative propositions altogether.
+            raise NoPath
+
+        son_id = link.to_node_id
+        son_idx = g.node_id_to_idx[son_id]
+
+        try:
+            path_from_son_to_end = find_path_between(son_idx, end_node_idx, g)
+        except NoPath:
+            continue
+
+        # if we haven't encountered NoPath and skipped with 'continue' then we output our found path
+        return [(subtree_root, link)] + path_from_son_to_end
+
+
+def find_lowest_common_ancestor(e1_path_to_root, e2_path_to_root):
+    """finds the lowest common ancestor (LCA) by going down the two paths, helper to suggest_entity_pairs.\n
+    takes as input two lists of (AMRNode, AMRLink) tuples."""
+    for ancestor_idx in range(min(len(e1_path_to_root), len(e2_path_to_root))):
+        # the first difference is just under the LCA
+        if e1_path_to_root[ancestor_idx][0].id != e1_path_to_root[ancestor_idx][0].id:
+            return ancestor_idx - 1
+
+
+def suggest_entity_pairs(g: AMRGraph):
+    nodes, adjacency = g.nodes, g.adjacency
+    entities = [node for node in nodes if is_entity(node, g)]
+    n_entities = len(entities)
+
+    # We go through the nodes one by one: we look at their children (at adjacency[node_idx]), which are under the node
+    # where the variable behind the node is defined (i.e. first seen in the AMR tree).
+
+    # We compute the 'distances' between each entity pair by saving the path of each entity to the root, then finding
+    # the common sub-paths for each entity pair.
+    # The 'distance' follows the following rules:
+    #   - if there is no verb in the path, d=Inf
+    #   - if the two entities are :ARG0 and :ARGn (n > 0) of the same verb, then d=inf, same for :op s. (manual check)
+    #   - if one of the nodes on the path has a :polarity - attribute, then d=inf
+
+    # Once we have all the distances, the proposed associate for each entity its closest entity (if any).
+
+    # Remark on multiple references of the same AMR variable:
+    # A link z_n (current node) -> z_m (other node) where z_m has already been defined is encoded in our AMR Graph
+    # as z_n -> l_k where l_k is a leaf with a description='z_m'. This makes our structure a rigorous tree.
+
+    # --- STEP 1 --- compute the paths to the AMR tree root (always z0 of idx 0)
+    paths_to_root = [] * n_entities
+    for node_idx, node in enumerate(nodes):
+        try:
+            paths_to_root[node_idx] = find_path_between(0, node_idx, g)
+        except NoPath:
+            paths_to_root[node_idx] = None
+
+    # --- STEP 2 --- compute the paths between the pairs using the lowest common ancestor by intersecting the root paths
+    # We also check the constraints on the path, leaving it as 9999 if invalid and compute the pair distances
+    pair_distances = [[9999] * n_entities for _ in range(n_entities)]  # 9999 ~ Inf
+    for e1_idx in range(n_entities):
+        for e2_idx in range(e1_idx + 1, n_entities):
+            e1_path_to_root, e2_path_to_root = paths_to_root[e1_idx], paths_to_root[e2_idx]
+
+            if e1_path_to_root is None or e2_path_to_root is None:  # if there is already no path, continue
+                continue
+
+            LCA_idx_in_path = find_lowest_common_ancestor(e1_path_to_root, e2_path_to_root)
+            # path e1 -> ... > LCA (flipped the node order but the links are broken)
+            path_e1_to_lca = e1_path_to_root[:LCA_idx_in_path - 1:-1]
+            path_lca_excluded_to_e2 = e2_path_to_root[LCA_idx_in_path + 1:]
+
+            # flipping back the link, right now they are from i+1 to i
+            for idx in range(len(path_e1_to_lca - 1)):
+                link_from_next_to_here = path_e1_to_lca[idx + 1][1]
+                next_node = path_e1_to_lca[idx + 1][0]
+                link_from_here_to_next = AMRLink(op=link_from_next_to_here.op,
+                                                 to_node_id=next_node.id,
+                                                 to_node_idx=g.node_id_to_idx[next_node.id])
+                path_e1_to_lca[idx][1] = link_from_here_to_next  # updating the link to the right direction
+
+            # writing the link from the LCA to the next node in the path lca -> ... -> e2 (downward)
+            path_e1_to_lca[-1][1] = e2_path_to_root[LCA_idx_in_path][1]
+            path = path_e1_to_lca + path_lca_excluded_to_e2
+
+            # we check whether the LCA in the path has invalid operators: this is the case if we have:
+            #        invalid op           invalid op
+            # node ------up-------> LCA -----down-----> node
+            if path[LCA_idx_in_path - 1][1].op in NO_NEIGHBOUR_PAIRS_WITH_THESE_OPERATORS and \
+                    path[LCA_idx_in_path][1].op in NO_NEIGHBOUR_PAIRS_WITH_THESE_OPERATORS:
+                continue  # we leave the distance at 9999 (Inf basically)
+
+            # we check if there is a verb in the path: if there isn't, the path is invalid.
+            found_verb = False
+            for path_tuple in path:
+                if is_verb(path_tuple[0]):
+                    found_verb = True
+
+            if not found_verb:
+                continue
+
+            pair_distances[e1_idx][e1_idx] = len(path) - 2  # the path includes the endings, hence -2
+
+    # --- STEP 3 --- for each entity, propose its closest other entity (if any) TODO
+
+
 class AMRParser:
     """
     Uses the SPRING AMR parsing model to parse a raw text sentence into an AMRGraph.
     Code adapted from https://github.com/SapienzaNLP/spring/blob/main/bin/predict_amrs_from_plaintext.py
     """
+
     def __init__(self, config=AMR_CONFIG):
         with HiddenPrints():  # avoid TF logs
             model_name = 'facebook/bart-large'
