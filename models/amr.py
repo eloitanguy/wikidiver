@@ -12,10 +12,10 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"  # disable annoying TF logs (TF is load
 from models.spring_amr.penman import encode
 from models.spring_amr.utils import instantiate_model_and_tokenizer
 
-NO_NEIGHBOUR_PAIRS_WITH_THESE_OPERATORS = ['op1', 'op2', 'op3', 'op4', 'op5', 'ARG1', 'ARG2', 'ARG3', ':RG4', 'ARG5',
-                                           'ARG6', 'ARG7', 'ARG8', 'ARG9', 'ARG10', 'ARG11', 'ARG12', 'ARG13', 'ARG14',
-                                           'ARG15', 'ARG16', 'ARG17', 'ARG18', 'ARG19', 'ARG20'
-                                           ]
+OPS = ['op1', 'op2', 'op3', 'op4', 'op5']
+
+ARGS_NONZERO = ['ARG1', 'ARG2', 'ARG3', ':ARG4', 'ARG5', 'ARG6', 'ARG7', 'ARG8', 'ARG9', 'ARG10', 'ARG11', 'ARG12',
+                'ARG13', 'ARG14', 'ARG15', 'ARG16', 'ARG17', 'ARG18', 'ARG19', 'ARG20']
 
 
 class NoColonError(Exception):
@@ -96,11 +96,11 @@ def is_entity(z: AMRNode, g):
     return False
 
 
-def refers_to(l: AMRNode, z: AMRNode):
+def refers_to(leaf: AMRNode, z: AMRNode):
     """
     Returns True iff l is a leaf referring to the variable z in their AMR graph.
     """
-    return l.id[0] == 'l' and l.description == z.id
+    return leaf.id[0] == 'l' and leaf.description == z.id
 
 
 def is_verb(z: AMRNode):
@@ -239,18 +239,16 @@ class AMRGraph:
 
 def find_path_between(start_node_idx, end_node_idx, g: AMRGraph):
     """
-    Returns a path from start_node_idx of the AMR tree g to end_node_idx.\n
+    Returns a path from start_node_idx of the AMR tree g to end_node_idx. \n
+    Requires start_node_idx to be higher in the tree!\n
     The only rule from suggest_entity_pairs that we follow is about the polarity, the others are checked later.\n
-    :return: the path: list of (AMRNode, AMRLink), [] if they are the same or raise NoPath if there is no path.
+    :return: the path: list of [AMRNode, AMRLink], raise NoPath if there is no path.
     """
     subtree_root = g.nodes[start_node_idx]
-    if not g.adjacency[start_node_idx]:  # if there are no children, we need to check whether they are the same.
-        if start_node_idx == end_node_idx:
-            return [subtree_root, None]
-        else:
-            raise NoPath
-
-    for link in g.adjacency[start_node_idx]:
+    if start_node_idx == end_node_idx:  # Checking if the two nodes are the same already
+        # the link empty link that should not be used to ensure correct typing
+        return [[subtree_root, AMRLink(op='-1', to_node_id='-1', to_node_idx=-1)]]
+    for link in g.adjacency[start_node_idx]:  # if there are no children, we have already checked if they are the same
         if link.op == 'polarity':  # no negative facts so we forbid negative propositions altogether.
             raise NoPath
 
@@ -263,16 +261,22 @@ def find_path_between(start_node_idx, end_node_idx, g: AMRGraph):
             continue
 
         # if we haven't encountered NoPath and skipped with 'continue' then we output our found path
-        return [(subtree_root, link)] + path_from_son_to_end
+        return [[subtree_root, link]] + path_from_son_to_end
+
+    # if we have exhausted the sons and not returned anything then there is not path
+    raise NoPath
 
 
-def find_lowest_common_ancestor(e1_path_to_root, e2_path_to_root):
+def find_lowest_common_ancestor(e1_path_from_root, e2_path_from_root):
     """finds the lowest common ancestor (LCA) by going down the two paths, helper to suggest_entity_pairs.\n
     takes as input two lists of (AMRNode, AMRLink) tuples."""
-    for ancestor_idx in range(min(len(e1_path_to_root), len(e2_path_to_root))):
+    for ancestor_idx in range(min(len(e1_path_from_root), len(e2_path_from_root))):
         # the first difference is just under the LCA
-        if e1_path_to_root[ancestor_idx][0].id != e1_path_to_root[ancestor_idx][0].id:
+        if e1_path_from_root[ancestor_idx][0].id != e2_path_from_root[ancestor_idx][0].id:
             return ancestor_idx - 1
+
+    # if we're at the end then either the last node is the LCA (and one path is included in another)
+    return min(len(e1_path_from_root), len(e2_path_from_root)) - 1
 
 
 def suggest_entity_pairs(g: AMRGraph):
@@ -297,30 +301,32 @@ def suggest_entity_pairs(g: AMRGraph):
     # as z_n -> l_k where l_k is a leaf with a description='z_m'. This makes our structure a rigorous tree.
 
     # --- STEP 1 --- compute the paths to the AMR tree root (always z0 of idx 0)
-    paths_to_root = [] * n_entities
-    for node_idx, node in enumerate(nodes):
+    paths_from_root = []
+    for node in entities:
         try:
-            paths_to_root[node_idx] = find_path_between(0, node_idx, g)
+            paths_from_root.append(find_path_between(0, g.node_id_to_idx[node.id], g))
         except NoPath:
-            paths_to_root[node_idx] = None
+            paths_from_root.append(None)
 
     # --- STEP 2 --- compute the paths between the pairs using the lowest common ancestor by intersecting the root paths
     # We also check the constraints on the path, leaving it as 9999 if invalid and compute the pair distances
     pair_distances = [[9999] * n_entities for _ in range(n_entities)]  # 9999 ~ Inf
     for e1_idx in range(n_entities):
         for e2_idx in range(e1_idx + 1, n_entities):
-            e1_path_to_root, e2_path_to_root = paths_to_root[e1_idx], paths_to_root[e2_idx]
+            e1_path_from_root, e2_path_from_root = paths_from_root[e1_idx], paths_from_root[e2_idx]
 
-            if e1_path_to_root is None or e2_path_to_root is None:  # if there is already no path, continue
+            if e1_path_from_root is None or e2_path_from_root is None:  # if there is already no path, continue
                 continue
 
-            LCA_idx_in_path = find_lowest_common_ancestor(e1_path_to_root, e2_path_to_root)
+            LCA_idx_in_path_from_root = find_lowest_common_ancestor(e1_path_from_root, e2_path_from_root)
             # path e1 -> ... > LCA (flipped the node order but the links are broken)
-            path_e1_to_lca = e1_path_to_root[:LCA_idx_in_path - 1:-1]
-            path_lca_excluded_to_e2 = e2_path_to_root[LCA_idx_in_path + 1:]
+            path_e1_to_lca = e1_path_from_root[:LCA_idx_in_path_from_root - 1:-1] if LCA_idx_in_path_from_root != 0 \
+                else e1_path_from_root[::-1]
+            # path lCA -> [node -> ... -> e2] (LCA is excluded)
+            path_lca_excluded_to_e2 = e2_path_from_root[LCA_idx_in_path_from_root + 1:]
 
             # flipping back the link, right now they are from i+1 to i
-            for idx in range(len(path_e1_to_lca - 1)):
+            for idx in range(len(path_e1_to_lca) - 1):
                 link_from_next_to_here = path_e1_to_lca[idx + 1][1]
                 next_node = path_e1_to_lca[idx + 1][0]
                 link_from_here_to_next = AMRLink(op=link_from_next_to_here.op,
@@ -329,15 +335,25 @@ def suggest_entity_pairs(g: AMRGraph):
                 path_e1_to_lca[idx][1] = link_from_here_to_next  # updating the link to the right direction
 
             # writing the link from the LCA to the next node in the path lca -> ... -> e2 (downward)
-            path_e1_to_lca[-1][1] = e2_path_to_root[LCA_idx_in_path][1]
+            path_e1_to_lca[-1][1] = e1_path_from_root[LCA_idx_in_path_from_root][1]
             path = path_e1_to_lca + path_lca_excluded_to_e2
+            LCA_idx_in_e1_to_e2_path = len(path_e1_to_lca) - 1  # the lca is the last element of this list
 
             # we check whether the LCA in the path has invalid operators: this is the case if we have:
-            #        invalid op           invalid op
-            # node ------up-------> LCA -----down-----> node
-            if path[LCA_idx_in_path - 1][1].op in NO_NEIGHBOUR_PAIRS_WITH_THESE_OPERATORS and \
-                    path[LCA_idx_in_path][1].op in NO_NEIGHBOUR_PAIRS_WITH_THESE_OPERATORS:
-                continue  # we leave the distance at 9999 (Inf basically)
+            #           op n                 op m
+            # node ------up-------> LCA -----down-----> node      (first 'if')
+            # Or if we have the same with ARGn, ARGm, n,m>0 when there is also an :ARG0     (second 'if')
+            # for a path to be able to take this test it needs to have a node before the LCA, ie lca_idx > 0
+
+            if LCA_idx_in_e1_to_e2_path > 0:
+                if path[LCA_idx_in_path_from_root - 1][1].op in OPS and path[LCA_idx_in_path_from_root][1].op in OPS:
+                    continue  # we leave the distance at 9999 (Inf basically)
+
+                lca_node_idx = g.node_id_to_idx[e1_path_from_root[LCA_idx_in_path_from_root][0].id]  # lca idx @ g.nodes
+                if 'ARG0' in [link.op for link in g.adjacency[lca_node_idx]] and LCA_idx_in_e1_to_e2_path != 0:
+                    if path[LCA_idx_in_e1_to_e2_path - 1][1].op in ARGS_NONZERO \
+                            and path[LCA_idx_in_e1_to_e2_path][1].op in ARGS_NONZERO:
+                        continue  # we leave the distance at 9999
 
             # we check if there is a verb in the path: if there isn't, the path is invalid.
             found_verb = False
@@ -346,11 +362,68 @@ def suggest_entity_pairs(g: AMRGraph):
                     found_verb = True
 
             if not found_verb:
+                continue  # we leave the distance at 9999
+
+            pair_distances[e1_idx][e2_idx] = len(path) - 2  # the path includes the endings
+    # --- STEP 3 --- update the distances so that if a leaf l referring to an entity e1 is close to e2,
+    # then e1 is saved as close to e2. First we find the references, then we update the distances.
+    referring_to_list = [{'id': '-1', 'idx': -1} for _ in range(n_entities)]
+    for e1_idx, e1 in enumerate(entities):
+        if 'z' in e1.id:  # this is not a leaf variable
+            referring_to_list[e1_idx] = {'id': e1.id, 'idx': e1_idx}
+
+        else:  # then this could be a leaf variable
+            found_reference = False
+            for e2_idx, e2 in enumerate(entities):  # we check for other variables that e1 could refer to
+                if refers_to(e1, e2) and e1.id != e2.id:
+                    referring_to_list[e1_idx] = {'id': e2.id, 'idx': e2_idx}
+                    found_reference = True
+
+            # if found_reference == False, it was actually not a leaf variable
+            if not found_reference:
+                referring_to_list[e1_idx] = {'id': e1.id, 'idx': e1_idx}
+
+    print('updating d')
+    for e1_idx in range(n_entities):
+        for e2_idx in range(e1_idx + 1, n_entities):
+            # the distance between the two diff. entities is the closest distance between any of their representatives
+            if referring_to_list[e1_idx]['idx'] != referring_to_list[e2_idx]['idx']:
+                pair_distances[referring_to_list[e1_idx]['idx']][referring_to_list[e2_idx]['idx']] = \
+                    min(pair_distances[e1_idx][e2_idx],
+                        pair_distances[referring_to_list[e1_idx]['idx']][e2_idx],
+                        pair_distances[e1_idx][referring_to_list[e2_idx]['idx']],
+                        pair_distances[referring_to_list[e1_idx]['idx']][referring_to_list[e2_idx]['idx']])
+
+    # --- STEP 4 --- for each entity, proposes the closest legal entities (list if equal distance)
+    suggested_pair_ids = []
+    for e1_idx in range(n_entities):
+
+        # only find pairs between non-leaves -> no pair repetition
+        if referring_to_list[e1_idx]['id'] != entities[e1_idx].id:
+            continue
+
+        best_distance = 9999
+        best_e2_indices = []
+        for e2_idx in range(e1_idx + 1, n_entities):
+
+            # only find pairs between non-leaves -> no pair repetition
+            if referring_to_list[e2_idx]['id'] != entities[e2_idx].id:
                 continue
 
-            pair_distances[e1_idx][e1_idx] = len(path) - 2  # the path includes the endings, hence -2
+            if pair_distances[e1_idx][e2_idx] < best_distance:  # if we beat the record, we start a new list
+                best_distance = pair_distances[e1_idx][e2_idx]
+                best_e2_indices = [e2_idx]
 
-    # --- STEP 3 --- for each entity, propose its closest other entity (if any) TODO
+            elif pair_distances[e1_idx][e2_idx] == best_distance:  # same distance -> add to the podium list
+                best_e2_indices.append(e2_idx)
+
+        if best_distance != 9999:  # if there are legal propositions, give them
+            e1_id = referring_to_list[e1_idx]['id']
+            for best_e2_idx in best_e2_indices:
+                e2_id = referring_to_list[best_e2_idx]['id']
+                suggested_pair_ids.append({'e1': e1_id, 'e2': e2_id, 'd': best_distance})
+
+    return suggested_pair_ids
 
 
 class AMRParser:
