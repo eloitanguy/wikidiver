@@ -383,7 +383,6 @@ def suggest_entity_pairs(g: AMRGraph):
             if not found_reference:
                 referring_to_list[e1_idx] = {'id': e1.id, 'idx': e1_idx}
 
-    print('updating d')
     for e1_idx in range(n_entities):
         for e2_idx in range(e1_idx + 1, n_entities):
             # the distance between the two diff. entities is the closest distance between any of their representatives
