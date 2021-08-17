@@ -20,6 +20,8 @@ if __name__ == '__main__':
                         help='Save all wikivitals article texts')
     parser.add_argument('--a-wv', '--annotate-wikivitals', action='store_true',
                         help='Save annotated Wikivitals sentences')
+    parser.add_argument('--a-wv-amr', '--annotate-wikivitals-amr', action='store_true',
+                        help='Save annotated Wikivitals sentences with AMR NER')
     parser.add_argument('--enc-wv', '--encode-wikivitals', action='store_true',
                         help='Encoding Wikivitals sentences using BERT-base')
     parser.add_argument('--w-wv', '--wikify-wikivitals', action='store_true',
@@ -58,6 +60,10 @@ if __name__ == '__main__':
     if args.a_wv:
         print('Saving annotated Wikivitals sentences ...')
         save_wikipedia_fact_dataset('wikivitals/data/encoded/')
+
+    if args.a_wv_amr:
+        print('Saving annotated Wikivitals sentences with AMR NER ...')
+        save_wikipedia_fact_dataset('wikivitals/data/encoded_amr_ner/', ner='amr')
 
     if args.enc_wv:
         print('Encoding Wikivitals sentences using BERT-base ...')

@@ -12,6 +12,7 @@ import time
 from datetime import timedelta
 from urllib.error import HTTPError
 from torch.utils.data import Dataset
+from models.amr import AMRParser
 
 
 class WikipediaSentences(object):
@@ -24,7 +25,7 @@ class WikipediaSentences(object):
     """
 
     def __init__(self, dataset_type, n_sentences_total=200000, n_relations=50, max_entity_pair_distance=4,
-                 bilateral_context=4, max_sentence_length=32):
+                 bilateral_context=4, max_sentence_length=32, ner='wikifier'):
         assert dataset_type in ["train", "val"]
         self.dataset_type = dataset_type
         self.max_entity_pair_distance = max_entity_pair_distance
@@ -53,6 +54,9 @@ class WikipediaSentences(object):
         self.coref = CoreferenceResolver()
         self.splitter = SentenceSplitter()
         self.fact_finder = FactFinder()
+        self.use_wikifier = ner == 'wikifier'
+        if not self.use_wikifier:
+            self.amr_parser = AMRParser()
 
     def __len__(self):
         return self.n_sentences  # Artificially set to the wanted number of sentences
@@ -85,7 +89,11 @@ class WikipediaSentences(object):
 
             for sent in selected_sentences:  # going through the sentences
                 try:
-                    wikifier_results = wikifier(sent)
+                    if self.use_wikifier:
+                        wikifier_results = wikifier(sent)
+                    else:
+                        g = self.amr_parser.parse_text(sent)
+                        wikifier_results = g.ner_results()
                 except KeyError:  # sometimes the wikifier request will not give the wikidata IDs -> skip the sentence
                     continue
 
@@ -95,8 +103,11 @@ class WikipediaSentences(object):
                 for e1_idx in range(n_mentions):
                     for e2_idx in range(e1_idx + 1, min(e1_idx + self.max_entity_pair_distance, n_mentions)):
                         e1_dict, e2_dict = wikifier_results[e1_idx], wikifier_results[e2_idx]
-                        sliced_sentence = get_sliced_relation_mention(e1_dict, e2_dict, sent,
-                                                                      bilateral_context=self.bilateral_context)
+                        if self.use_wikifier:
+                            sliced_sentence = get_sliced_relation_mention(e1_dict, e2_dict, sent,
+                                                                          bilateral_context=self.bilateral_context)
+                        else:  # no slice in AMR mode
+                            sliced_sentence = sent
 
                         if len(sliced_sentence.split(' ')) <= self.max_sentence_length:
                             try:
@@ -116,7 +127,7 @@ class WikipediaSentences(object):
         return self.get_random_annotated_sentence()
 
 
-def save_wikipedia_fact_dataset(folder):
+def save_wikipedia_fact_dataset(folder, ner='wikifier'):
     """
     Saves a Wikipedia Sentences dataset with (string) sentences and (int) labels.
     Also saves a file storing the wikifier results for each sentence.
@@ -126,7 +137,7 @@ def save_wikipedia_fact_dataset(folder):
         os.makedirs(folder)
 
     def save_dataset(dataset_type, save_relation_dictionary=True):
-        dataset = WikipediaSentences(dataset_type=dataset_type)
+        dataset = WikipediaSentences(dataset_type=dataset_type, ner=ner)
         all_wikified_results = []
 
         relation_idx_to_name = dataset.relation_idx_to_name
