@@ -17,6 +17,11 @@ OPS = ['op1', 'op2', 'op3', 'op4', 'op5']
 ARGS_NONZERO = ['ARG1', 'ARG2', 'ARG3', ':ARG4', 'ARG5', 'ARG6', 'ARG7', 'ARG8', 'ARG9', 'ARG10', 'ARG11', 'ARG12',
                 'ARG13', 'ARG14', 'ARG15', 'ARG16', 'ARG17', 'ARG18', 'ARG19', 'ARG20']
 
+# exceptions to the rule "a description indicates a verb iif it has a '-'."
+NOT_VERBS = ['date-entity', 'government-organization', 'temporal-quantity', 'amr-unknown', 'multi-sentence',
+             'political-party', 'monetary-quantity', 'ordinal-entity', 'religious-group', 'percentage-entity',
+             'world-region', 'url-entity', 'political-movement', 'et-cetera', 'at-least', 'mass-quantity']
+
 
 class NoColonError(Exception):
     pass
@@ -104,7 +109,7 @@ def refers_to(leaf: AMRNode, z: AMRNode):
 
 
 def is_verb(z: AMRNode):
-    return '-' in z.description and 'entity' not in z.description
+    return '-' in z.description and z.description not in NOT_VERBS
 
 
 class AMRGraph:
@@ -235,6 +240,63 @@ class AMRGraph:
 
     def __repr__(self):
         return self.__str__()
+
+    def to_tikz(self):
+        def tikz_node_type(node):
+            if is_verb(node):
+                node_type = 'v'
+            elif node.ner:
+                node_type = 'e'
+            else:
+                node_type = 'n'
+            return node_type
+
+        root = self.nodes[0]
+        tikz_string_list = [
+            '\\begin{tikzpicture}',
+            '\t[',
+            '\t\tv/.style={rectangle, draw=red!60, fill=red!5, very thick, minimum size=5mm},',
+            '\t\tn/.style={rectangle, draw=blue!60, fill=blue!5, very thick, minimum size=5mm},',
+            '\t\tz/.style={rectangle, draw=green!60, fill=green!5, very thick, minimum size=5mm},',
+            '\t\tlevel distance=6em,',
+            '\t\tlevel 1/.style={sibling distance=10em},  % TO EDIT',
+            '\t\tlevel 2/.style={sibling distance=15em},  % TO EDIT',
+            '\t\tlevel 3/.style = {sibling distance = 8em}, % TO EDIT',
+            '\t\tlevel 4/.style = {sibling distance = 8em}, % TO EDIT',
+            '\t\tlevel 5/.style = {sibling distance = 8em}, % TO EDIT',
+            '\t\tlevel 6/.style = {sibling distance = 8em}, % TO EDIT',
+            '\t\tlevel 7/.style = {sibling distance = 8em}, % TO EDIT',
+            '\t\tlevel 8/.style = {sibling distance = 8em}, % TO EDIT',
+            '\t\tlevel 9/.style = {sibling distance = 8em}, % TO EDIT',
+            '\t\tlevel 10/.style = {sibling distance = 8em}, % TO EDIT',
+            '\t\tsloped',
+            '\t]',
+            '\t\\node[{}] {{{} / {}}}'.format(tikz_node_type(root), root.id, root.description)
+        ]
+
+        def to_tikz_from_node_idx(node_idx, current_tab, op_to_this_node):
+            children = self.adjacency[node_idx]
+            node = self.nodes[node_idx]
+            node_type = tikz_node_type(node)
+            tab = '\t' * current_tab
+            if 'l' not in node.id:
+                res = [tab + 'child {{ node [{}] {{{} / {}}}'.format(node_type, node.id, node.description)]
+            else:
+                res = [tab + 'child {{ node [{}] {{{}}}'.format(node_type, node.description)]
+
+            for child in children:
+                res.extend(to_tikz_from_node_idx(child.to_node_idx, current_tab + 1, child.op))
+
+            res = res + ['\t' * (current_tab + 1) + 'edge from parent node [above] {{:{}}} }}'.format(op_to_this_node)]
+            return res
+
+        for link in self.adjacency[0]:
+            tikz_string_list.extend(to_tikz_from_node_idx(link.to_node_idx, 2, link.op))
+
+        tikz_string_list[-1] = tikz_string_list[-1] + ';'  # concluding the tikz env with a semicolon
+        tikz_string_list.append('\end{tikzpicture}')
+
+        return '\n'.join(tikz_string_list)
 
 
 def find_path_between(start_node_idx, end_node_idx, g: AMRGraph):
