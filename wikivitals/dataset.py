@@ -12,7 +12,7 @@ import time
 from datetime import timedelta
 from urllib.error import HTTPError
 from torch.utils.data import Dataset
-from models.amr import AMRParser
+from models.amr import AMRParser, suggest_entity_pairs
 
 
 class WikipediaSentences(object):
@@ -88,37 +88,43 @@ class WikipediaSentences(object):
             random.shuffle(sentences)  # shuffling afterwards to ensure that the sets are disjoint
 
             for sent in selected_sentences:  # going through the sentences
-                try:
-                    if self.use_wikifier:
-                        wikifier_results = wikifier(sent)
-                    else:
-                        g = self.amr_parser.parse_text(sent)
-                        wikifier_results = g.ner_results()
-                except KeyError:  # sometimes the wikifier request will not give the wikidata IDs -> skip the sentence
-                    continue
-
-                n_mentions = len(wikifier_results)
-
                 # Trying entity pair possibilities from the sentence
-                for e1_idx in range(n_mentions):
-                    for e2_idx in range(e1_idx + 1, min(e1_idx + self.max_entity_pair_distance, n_mentions)):
-                        e1_dict, e2_dict = wikifier_results[e1_idx], wikifier_results[e2_idx]
-                        if self.use_wikifier:
+                if self.use_wikifier:
+                    try:
+                        wikifier_results = wikifier(sent)
+                    # sometimes the wikifier request will not give the wikidata IDs -> skip the sentence
+                    except KeyError:
+                        continue
+                    n_mentions = len(wikifier_results)
+                    for e1_idx in range(n_mentions):
+                        for e2_idx in range(e1_idx + 1, min(e1_idx + self.max_entity_pair_distance, n_mentions)):
+                            e1_dict, e2_dict = wikifier_results[e1_idx], wikifier_results[e2_idx]
                             sliced_sentence = get_sliced_relation_mention(e1_dict, e2_dict, sent,
                                                                           bilateral_context=self.bilateral_context)
-                        else:  # no slice in AMR mode
-                            sliced_sentence = sent
 
-                        if len(sliced_sentence.split(' ')) <= self.max_sentence_length:
-                            try:
-                                _, r, _ = self.fact_finder.get_fact(e1_dict['id'], e2_dict['id'])
-                                if r in self.relation_ids:  # checking if the relation is in the top relations
-                                    return {'sentence': sliced_sentence,
-                                            'label': self.relation_id_to_idx[r],
-                                            'wikifier_results': wikifier_results}
-                                pass
-                            except FactNotFoundError:  # No fact in this entity pair, carry on
-                                pass
+                            if len(sliced_sentence.split(' ')) <= self.max_sentence_length:
+                                try:
+                                    _, r, _ = self.fact_finder.get_fact(e1_dict['id'], e2_dict['id'])
+                                    if r in self.relation_ids:  # checking if the relation is in the top relations
+                                        return {'sentence': sliced_sentence,
+                                                'label': self.relation_id_to_idx[r],
+                                                'wikifier_results': wikifier_results}
+                                    pass
+                                except FactNotFoundError:  # No fact in this entity pair, carry on
+                                    pass
+
+                else:  # AMR mode: pair suggestion and no sentence slicing
+                    g = self.amr_parser.parse_text(sent)
+                    wikifier_results = g.ner_results()
+                    pair_suggestions = [(suggestion['e1'], suggestion['e2']) for suggestion in suggest_entity_pairs(g)]
+                    for (e1, e2) in pair_suggestions:
+                        try:
+                            _, r, _ = self.fact_finder.get_fact(e1, e2)
+                            return {'sentence': sent,
+                                    'label': self.relation_id_to_idx[r],
+                                    'wikifier_results': wikifier_results}
+                        except FactNotFoundError:  # No fact in this entity pair, carry on
+                            continue
 
         # If we are this far, we have found no fact in the entire article... so we try another
         return self.get_random_annotated_sentence()
