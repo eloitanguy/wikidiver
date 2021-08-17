@@ -102,7 +102,9 @@ class WikipediaSentences(object):
                             try:
                                 _, r, _ = self.fact_finder.get_fact(e1_dict['id'], e2_dict['id'])
                                 if r in self.relation_ids:  # checking if the relation is in the top relations
-                                    return {'sentence': sliced_sentence, 'label': self.relation_id_to_idx[r]}
+                                    return {'sentence': sliced_sentence,
+                                            'label': self.relation_id_to_idx[r],
+                                            'wikifier_results': wikifier_results}
                                 pass
                             except FactNotFoundError:  # No fact in this entity pair, carry on
                                 pass
@@ -117,6 +119,7 @@ class WikipediaSentences(object):
 def save_wikipedia_fact_dataset(folder):
     """
     Saves a Wikipedia Sentences dataset with (string) sentences and (int) labels.
+    Also saves a file storing the wikifier results for each sentence.
     """
 
     if not os.path.exists(folder):
@@ -124,6 +127,7 @@ def save_wikipedia_fact_dataset(folder):
 
     def save_dataset(dataset_type, save_relation_dictionary=True):
         dataset = WikipediaSentences(dataset_type=dataset_type)
+        all_wikified_results = []
 
         relation_idx_to_name = dataset.relation_idx_to_name
 
@@ -150,18 +154,23 @@ def save_wikipedia_fact_dataset(folder):
                 dataset_item_list = pool.map(dataset.placeholder_sentence_extractor, range(workers))
                 batch = {
                     'sentence': [item['sentence'] for item in dataset_item_list],
-                    'label': np.array([item['label'] for item in dataset_item_list])
+                    'label': np.array([item['label'] for item in dataset_item_list]),
+                    'wikifier_results': [item['wikifier_results'] for item in dataset_item_list]
                 }
                 batch_size = len(batch['sentence'])
                 upper_slice_exclusive = min(current_output_idx + batch_size, total_sentences)  # avoid going OOB
                 labels[current_output_idx:upper_slice_exclusive] = batch['label']
                 sentences.extend(batch['sentence'])
+                all_wikified_results.extend(batch['wikifier_results'])
                 current_output_idx += batch_size
 
                 # checkpointing at every step
                 with open(os.path.join(folder, dataset_type + '_sentences.json'), 'w') as f:
                     json.dump(sentences, f)  # will be massive so no indent
                 np.save(os.path.join(folder, dataset_type + '_labels.npy'), labels)
+
+                with open(os.path.join(folder, dataset_type + 'wikified.json'), 'w') as f:
+                    json.dump(all_wikified_results, f)  # no indent for space efficiency
 
             except HTTPError:  # Handle rare exception: webpage retrieval failure
                 print('Caught an HTTPError.')

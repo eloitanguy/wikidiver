@@ -8,6 +8,7 @@ from tqdm import tqdm
 from models.ner import wikifier, CoreferenceResolver
 from wikivitals.construction import save_usa_text
 import matplotlib.pyplot as plt
+from extractor_base import NoFact
 
 
 def save_usa_entities():
@@ -208,40 +209,64 @@ def benchmark_routine(extractor, config, output_name, facts_file, article_text_f
     plt.show()
 
 
-def simple_benchmark(extractor, config, output_name='simple_benchmark_results'):
+def simple_benchmark(extractor, config, output_name='simple_benchmark_results', only_relations=True):
     results = [config]
     total_fact_correct, total_pair_correct = 0, 0
     with open('wikidatavitals/data/simple.json', 'r') as f:
         simple = json.load(f)
 
-    for sentence_entry in tqdm(simple):
-        sent = sentence_entry['sentence']
-        detections = extractor.extract_facts(sent, verbose=False)
-        pair_correct, fact_correct = False, False
-        e1, r, e2 = sentence_entry['e1']['id'], sentence_entry['r']['id'], sentence_entry['e2']['id']
+    if not only_relations:
+        for sentence_entry in tqdm(simple):
+            sent = sentence_entry['sentence']
+            detections = extractor.extract_facts(sent, verbose=False)
+            pair_correct, fact_correct = False, False
+            e1, r, e2 = sentence_entry['e1']['id'], sentence_entry['r']['id'], sentence_entry['e2']['id']
 
-        for det in detections:
-            if det['e1_id'] in (e1, e2) and det['e2_id'] in (e1, e2):
-                pair_correct = True
-            if det['e1_id'] == e1 and det['property_id'] == r and det['e2_id'] == e2:
-                fact_correct = True
+            for det in detections:
+                if det['e1_id'] in (e1, e2) and det['e2_id'] in (e1, e2):
+                    pair_correct = True
+                if det['e1_id'] == e1 and det['property_id'] == r and det['e2_id'] == e2:
+                    fact_correct = True
 
-        if pair_correct:
-            total_pair_correct += 1
+            if pair_correct:
+                total_pair_correct += 1
 
-        if fact_correct:
-            total_fact_correct += 1
+            if fact_correct:
+                total_fact_correct += 1
 
-        results.append({
-            'ground_truth': sentence_entry,
-            'detections': detections,
-            'pair_correct': pair_correct,
-            'fact_correct': fact_correct
-        })
+            results.append({
+                'ground_truth': sentence_entry,
+                'detections': detections,
+                'pair_correct': pair_correct,
+                'fact_correct': fact_correct
+            })
+
+        print('Correct pairs: {:.2f}%'.format(100 * total_pair_correct / len(simple)))
+
+    else:
+        with open('wikidatavitals/data/simple.json', 'r') as f:
+            simple = json.load(f)
+
+        for sentence_entry in tqdm(simple):
+            sent = sentence_entry['sentence']
+            e1_dict, r_gt, e2_dict = sentence_entry['e1'], sentence_entry['r']['id'], sentence_entry['e2']
+            try:
+                r_dt = extractor._get_relation(e1_dict, e2_dict, sent)[0]
+                fact_correct = r_dt == r_gt
+            except NoFact:
+                fact_correct = False
+                r_dt = 'None'
+
+            if fact_correct:
+                total_fact_correct += 1
+
+            results.append({
+                'ground_truth': sentence_entry,
+                'r_dt': r_dt,
+                'fact_correct': fact_correct
+            })
 
     print('Correct facts: {:.2f}%'.format(100 * total_fact_correct / len(simple)))
-    print('Correct pairs: {:.2f}%'.format(100 * total_pair_correct / len(simple)))
-
     with open(output_name + '.json', 'w') as f:
         json.dump(results, f, indent=4)
 

@@ -76,7 +76,7 @@ class V2(Extractor):
                 ),
                 order='p')
 
-            if sorted_probabilities['p'][-1] > self.threshold:
+            if sorted_probabilities['p'][-1] > 0:#self.threshold:
                 return sorted_probabilities['r_id'][::-1].tolist()
 
             raise NoFact
