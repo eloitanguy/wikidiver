@@ -17,11 +17,6 @@ OPS = ['op1', 'op2', 'op3', 'op4', 'op5']
 ARGS_NONZERO = ['ARG1', 'ARG2', 'ARG3', ':ARG4', 'ARG5', 'ARG6', 'ARG7', 'ARG8', 'ARG9', 'ARG10', 'ARG11', 'ARG12',
                 'ARG13', 'ARG14', 'ARG15', 'ARG16', 'ARG17', 'ARG18', 'ARG19', 'ARG20']
 
-# exceptions to the rule "a description indicates a verb iif it has a '-'."
-NOT_VERBS = ['date-entity', 'government-organization', 'temporal-quantity', 'amr-unknown', 'multi-sentence',
-             'political-party', 'monetary-quantity', 'ordinal-entity', 'religious-group', 'percentage-entity',
-             'world-region', 'url-entity', 'political-movement', 'et-cetera', 'at-least', 'mass-quantity']
-
 
 class NoColonError(Exception):
     pass
@@ -109,7 +104,14 @@ def refers_to(leaf: AMRNode, z: AMRNode):
 
 
 def is_verb(z: AMRNode):
-    return '-' in z.description and z.description not in NOT_VERBS
+    """
+    Checks whether z's description is of the form textext-number, detecting work-01=True, work-of-art=False
+    """
+    desc = z.description
+    # finding the index of the last dash, this will =len(desc) if there is no dash.
+    dash_idx = len(desc) - desc[::-1].find('-') - 1
+    # If the dash is on the last index, then it isn't a verb
+    return dash_idx < len(desc) - 1 and z.description[dash_idx + 1].isnumeric()
 
 
 class AMRGraph:
@@ -257,7 +259,7 @@ class AMRGraph:
             '\t[',
             '\t\tv/.style={rectangle, draw=red!60, fill=red!5, very thick, minimum size=5mm},',
             '\t\tn/.style={rectangle, draw=blue!60, fill=blue!5, very thick, minimum size=5mm},',
-            '\t\tz/.style={rectangle, draw=green!60, fill=green!5, very thick, minimum size=5mm},',
+            '\t\te/.style={rectangle, draw=green!60, fill=green!5, very thick, minimum size=5mm},',
             '\t\tlevel distance=6em,',
             '\t\tlevel 1/.style={sibling distance=10em},  % TO EDIT',
             '\t\tlevel 2/.style={sibling distance=15em},  % TO EDIT',
@@ -279,10 +281,11 @@ class AMRGraph:
             node = self.nodes[node_idx]
             node_type = tikz_node_type(node)
             tab = '\t' * current_tab
+            tikz_node_description = node.name if node.name else node.description
             if 'l' not in node.id:
-                res = [tab + 'child {{ node [{}] {{{} / {}}}'.format(node_type, node.id, node.description)]
+                res = [tab + 'child {{ node [{}] {{{} / {}}}'.format(node_type, node.id, tikz_node_description)]
             else:
-                res = [tab + 'child {{ node [{}] {{{}}}'.format(node_type, node.description)]
+                res = [tab + 'child {{ node [{}] {{{}}}'.format(node_type, tikz_node_description)]
 
             for child in children:
                 res.extend(to_tikz_from_node_idx(child.to_node_idx, current_tab + 1, child.op))
@@ -544,7 +547,7 @@ class AMRParser:
             name = var.wiki
         else:
             name = var.description
-            if '-' in name:  # an AMR description with a '-' is a verb and thus unlikely to be an entity -> skip
+            if is_verb(var):  # a verb cannot be an entity
                 return {}
             if len(name) < 4:  # too short: could be an acronym of a pronoun -> skip
                 return {}
