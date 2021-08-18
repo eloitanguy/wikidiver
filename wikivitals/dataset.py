@@ -133,7 +133,7 @@ class WikipediaSentences(object):
         return self.get_random_annotated_sentence()
 
 
-def save_wikipedia_fact_dataset(folder, ner='wikifier'):
+def save_wikipedia_fact_dataset(folder, ner='wikifier', in_batches=True):
     """
     Saves a Wikipedia Sentences dataset with (string) sentences and (int) labels.
     Also saves a file storing the wikifier results for each sentence.
@@ -168,26 +168,35 @@ def save_wikipedia_fact_dataset(folder, ner='wikifier'):
                 timedelta(seconds=elapsed / ratio - elapsed) if ratio > 0.000001 else '---')
             )
             try:
-                dataset_item_list = pool.map(dataset.placeholder_sentence_extractor, range(workers))
-                batch = {
-                    'sentence': [item['sentence'] for item in dataset_item_list],
-                    'label': np.array([item['label'] for item in dataset_item_list]),
-                    'wikifier_results': [item['wikifier_results'] for item in dataset_item_list]
-                }
-                batch_size = len(batch['sentence'])
-                upper_slice_exclusive = min(current_output_idx + batch_size, total_sentences)  # avoid going OOB
-                labels[current_output_idx:upper_slice_exclusive] = batch['label']
-                sentences.extend(batch['sentence'])
-                all_wikified_results.extend(batch['wikifier_results'])
-                current_output_idx += batch_size
+                if in_batches:
+                    dataset_item_list = pool.map(dataset.placeholder_sentence_extractor, range(workers))
+                    batch = {
+                        'sentence': [item['sentence'] for item in dataset_item_list],
+                        'label': np.array([item['label'] for item in dataset_item_list]),
+                        'wikifier_results': [item['wikifier_results'] for item in dataset_item_list]
+                    }
+                    batch_size = len(batch['sentence'])
+                    upper_slice_exclusive = min(current_output_idx + batch_size, total_sentences)  # avoid going OOB
+                    labels[current_output_idx:upper_slice_exclusive] = batch['label']
+                    sentences.extend(batch['sentence'])
+                    all_wikified_results.extend(batch['wikifier_results'])
+                    current_output_idx += batch_size
+                else:
+                    output_dict = dataset.get_random_annotated_sentence()
+                    labels[current_output_idx] = output_dict['label']
+                    sentences.append(output_dict['sentence'])
+                    all_wikified_results.append(output_dict['wikifier_results'])
+                    current_output_idx += 1
 
-                # checkpointing at every step
-                with open(os.path.join(folder, dataset_type + '_sentences.json'), 'w') as f:
-                    json.dump(sentences, f)  # will be massive so no indent
-                np.save(os.path.join(folder, dataset_type + '_labels.npy'), labels)
+                # checkpointing at every step in batch mode, every 50 in non-batch mode
 
-                with open(os.path.join(folder, dataset_type + 'wikified.json'), 'w') as f:
-                    json.dump(all_wikified_results, f)  # no indent for space efficiency
+                if not in_batches or current_output_idx % 1 == 0:
+                    with open(os.path.join(folder, dataset_type + '_sentences.json'), 'w') as f:
+                        json.dump(sentences, f)  # will be massive so no indent
+                    np.save(os.path.join(folder, dataset_type + '_labels.npy'), labels)
+
+                    with open(os.path.join(folder, dataset_type + 'wikified.json'), 'w') as f:
+                        json.dump(all_wikified_results, f)  # no indent for space efficiency
 
             except HTTPError:  # Handle rare exception: webpage retrieval failure
                 print('Caught an HTTPError.')

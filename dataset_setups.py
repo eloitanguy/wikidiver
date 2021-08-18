@@ -63,7 +63,7 @@ if __name__ == '__main__':
 
     if args.a_wv_amr:
         print('Saving annotated Wikivitals sentences with AMR NER ...')
-        save_wikipedia_fact_dataset('wikivitals/data/encoded_amr_ner/', ner='amr')
+        save_wikipedia_fact_dataset('wikivitals/data/encoded_amr_ner/', ner='amr', in_batches=False)
 
     if args.enc_wv:
         print('Encoding Wikivitals sentences using BERT-base ...')
