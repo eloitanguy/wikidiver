@@ -66,10 +66,11 @@ class V1(Extractor):
             if chosen_relation_idx == len(comparison_sentences) - 1:  # last sentence is <e1> <e2> here
                 raise NoFact
 
-        # slice :50 for the double_check option which adds an additional test with no relation -> 51 instead of 50
+        # slice :-1 for the double_check option which adds an additional test with no relation
+        upper_slice = -1 if self.double_check else len(sims)
         sorted_sims = np.sort(
             np.array(
-                [(self.verb_idx2id[idx], sim) for idx, sim in enumerate(sims[:50])],
+                [(self.verb_idx2id[idx], sim) for idx, sim in enumerate(sims[:upper_slice])],
                 dtype=[('r_id', 'U10'), ('sim', float)]
             ),
             order='sim')

@@ -1,5 +1,5 @@
 V0_CONFIG = {
-    'name': 'V1',
+    'name': 'V0',
     'n_relations': 50,
     'max_entity_pair_distance': 3
 }
@@ -7,7 +7,7 @@ V0_CONFIG = {
 V1_CONFIG = {
     'name': 'V1',
     'n_relations': 50,
-    'threshold': 0.8,
+    'threshold': 0,
     'double_check': True,  # checks whether adding the relation improves the similarity or not
     'bilateral_context': 4,
     'max_entity_pair_distance': 3
@@ -36,7 +36,7 @@ V2_CONFIG = {
 }
 
 V2p5_CONFIG = {
-    'name': 'V2',
+    'name': 'V2.5',
     'bilateral_context': 4,
     'max_entity_pair_distance': 3,
     'threshold': 0.6,
@@ -51,7 +51,7 @@ V3_XGB_CONFIG = {
 }
 
 V3_CONFIG = {
-    'name': 'V2',
+    'name': 'V3',
     'bilateral_context': 4,
     'max_entity_pair_distance': 3,
     'threshold': 0.1,

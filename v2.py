@@ -111,4 +111,4 @@ if __name__ == '__main__':
             hundo_benchmark(v2, v2.config)
 
         if args.s_b:
-            simple_benchmark(v2, V2_CONFIG)
+            simple_benchmark(v2, v2.config)

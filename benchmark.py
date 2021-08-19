@@ -140,6 +140,9 @@ def benchmark_routine(extractor, config, output_name, facts_file, article_text_f
         _all_outputs.extend(output)
         _predicted_facts.extend([[o['e1_id'], o['property_id'], o['e2_id']] for o in output])
 
+    if not os.path.exists('benchmark_results/'):
+        os.mkdir('benchmark_results/')
+
     t0 = time.time()
     print('Starting benchmark ...')
     predicted_facts, all_outputs = [], []
@@ -173,9 +176,6 @@ def benchmark_routine(extractor, config, output_name, facts_file, article_text_f
     for output_idx, output_dict in enumerate(all_outputs):
         output_dict['is_correct'] = str(success_bool[output_idx])
 
-    with open(output_name + '.json', 'w') as f:
-        json.dump([config] + all_outputs, f, indent=4)
-
     n_correct = np.sum(success01)
     n_correct_pairs = np.sum(pair_success01)
     n_predictions = np.shape(success01)[0]
@@ -191,29 +191,37 @@ def benchmark_routine(extractor, config, output_name, facts_file, article_text_f
     ranks = np.array(valid_ranks).astype(float)
 
     # Mean Reciprocal Rank
-    MRR = np.mean(ranks ** (-1))
+    MRR = np.mean(ranks ** (-1)) if ranks.size != 0 else -1
 
     if n_predictions == 0:
         print("No predictions :(")
+        all_outputs.append({'correct_percentage': 'No predictions :(', 'MRR': 'No predictions :('})
     else:
         print("Total predictions: {}\t correct%: {:.2f}%".format(n_predictions, 100 * n_correct / n_predictions))
         print("Total pairs: {}\t correct%: {:.2f}%".format(n_predictions, 100 * n_correct_pairs / n_predictions))
         print("Mean Reciprocal Rank (within correct pairs): {:.2f}".format(MRR))
+        all_outputs.append({'correct_percentage': str(100 * n_correct / n_predictions), 'MRR': str(MRR)})
 
+    with open('benchmark_results/' + output_name + '_' + config['name'] + '.json', 'w') as f:
+        json.dump([config] + all_outputs, f, indent=4)
     print('Benchmark time: ', timedelta(seconds=time.time()-t0))
 
-    plt.hist(ranks, 50, density=True, facecolor='b', alpha=0.75)
-    plt.xlabel('Rank')
-    plt.ylabel('Probability')
-    plt.title('Histogram of Ranks')
-    plt.show()
+    if ranks.size != 0:
+        plt.hist(ranks, 50, density=True, facecolor='b', alpha=0.75)
+        plt.xlabel('Rank')
+        plt.ylabel('Probability')
+        plt.title('Histogram of Ranks')
+        plt.show()
 
 
 def simple_benchmark(extractor, config, output_name='simple_benchmark_results', only_relations=True):
     results = [config]
-    total_fact_correct, total_pair_correct = 0, 0
+    total_fact_correct, total_pair_correct, valid_ranks = 0, 0, []
     with open('wikidatavitals/data/simple.json', 'r') as f:
         simple = json.load(f)
+
+    if not os.path.exists('benchmark_results/'):
+        os.mkdir('benchmark_results/')
 
     if not only_relations:
         for sentence_entry in tqdm(simple):
@@ -225,6 +233,9 @@ def simple_benchmark(extractor, config, output_name='simple_benchmark_results', 
             for det in detections:
                 if det['e1_id'] in (e1, e2) and det['e2_id'] in (e1, e2):
                     pair_correct = True
+                    ordered_candidates = det['ordered_candidates']
+                    rank = ordered_candidates.index(r) + 1
+                    valid_ranks.append(rank)
                 if det['e1_id'] == e1 and det['property_id'] == r and det['e2_id'] == e2:
                     fact_correct = True
 
@@ -250,9 +261,16 @@ def simple_benchmark(extractor, config, output_name='simple_benchmark_results', 
         for sentence_entry in tqdm(simple):
             sent = sentence_entry['sentence']
             e1_dict, r_gt, e2_dict = sentence_entry['e1'], sentence_entry['r']['id'], sentence_entry['e2']
+            rank = '-1'
             try:
-                r_dt = extractor._get_relation(e1_dict, e2_dict, sent)[0]
+                candidate_relations = extractor._get_relation(e1_dict, e2_dict, sent)
+                r_dt = candidate_relations[0]
                 fact_correct = r_dt == r_gt
+                try:
+                    rank = candidate_relations.index(r_gt) + 1
+                    valid_ranks.append(rank)
+                except ValueError:  # happens when the relation is not in the ranks (possible in v0 for typing reasons)
+                    pass
             except NoFact:
                 fact_correct = False
                 r_dt = 'None'
@@ -263,12 +281,25 @@ def simple_benchmark(extractor, config, output_name='simple_benchmark_results', 
             results.append({
                 'ground_truth': sentence_entry,
                 'r_dt': r_dt,
-                'fact_correct': fact_correct
+                'fact_correct': fact_correct,
+                'rank': rank
             })
 
     print('Correct facts: {:.2f}%'.format(100 * total_fact_correct / len(simple)))
-    with open(output_name + '.json', 'w') as f:
+    ranks = np.array(valid_ranks).astype(float)
+    MRR = np.mean(ranks ** (-1)) if ranks.size != 0 else -1
+    print("Mean Reciprocal Rank (within correct pairs): {:.2f}".format(MRR))
+
+    results.append({'correct_percentage': str(100 * total_fact_correct / len(simple)), 'MRR': str(MRR)})
+    with open('benchmark_results/' + output_name + '_' + config['name'] + '.json', 'w') as f:
         json.dump(results, f, indent=4)
+
+    if ranks.size != 0:
+        plt.hist(ranks, 50, density=True, facecolor='b', alpha=0.75)
+        plt.xlabel('Rank')
+        plt.ylabel('Probability')
+        plt.title('Histogram of Ranks')
+        plt.show()
 
 
 if __name__ == '__main__':
