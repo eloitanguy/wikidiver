@@ -5,6 +5,7 @@ import argparse
 from benchmark import usa_benchmark, hundo_benchmark, simple_benchmark
 from config import V1_CONFIG
 from extractor_base import Extractor, NoFact
+from models.filters import TypeFilter
 
 
 def get_unique(list_with_repetition):
@@ -35,11 +36,12 @@ class V1(Extractor):
 
     def __init__(self):
         n_relations, max_entity_pair_distance = V1_CONFIG['n_relations'], V1_CONFIG['max_entity_pair_distance']
-        super().__init__(n_relations=n_relations, max_entity_pair_distance=max_entity_pair_distance)
+        super().__init__(n_relations=n_relations, max_entity_pair_distance=max_entity_pair_distance, type_filter=False)
         self.comparator = UniversalSentenceEncoderComparator()
         self.threshold = V1_CONFIG['threshold']
         self.double_check = V1_CONFIG['double_check']
         self.bilateral_context = V1_CONFIG['bilateral_context']
+        self.TF = TypeFilter()
 
         with open('wikidatavitals/data/property_verbs.json', 'r') as f:
             all_verbs = json.load(f)
@@ -53,9 +55,7 @@ class V1(Extractor):
         self.verb_idx2id = [property_id for property_id in all_verb_idx2id if property_id in self.relation_ids]
 
     def _get_relation(self, e1_dict, e2_dict, processed_text):
-        comparison_sentences = get_comparison_sentences(e1_dict['mention'],
-                                                        e2_dict['mention'],
-                                                        self.verbs,
+        comparison_sentences = get_comparison_sentences(e1_dict, e2_dict, self.verbs, self.TF,
                                                         double_check=self.double_check)
         sliced_sentence = get_sliced_relation_mention(e1_dict, e2_dict, processed_text,
                                                       bilateral_context=self.bilateral_context)

@@ -31,12 +31,13 @@ class UniversalSentenceEncoderComparator(object):
         return cosine_similarity(v_query, v_candidates)
 
 
-def get_comparison_sentences(e1, e2, property_verbs, double_check=True):
+def get_comparison_sentences(e1_dict, e2_dict, property_verbs, type_filter, double_check=True):
     res = []
-    for verbs in property_verbs.values():
-        res.extend([e1 + ' ' + verb + ' ' + e2 for verb in verbs])
+    for r_id, verbs in property_verbs.items():
+        if type_filter.accept(e1_dict['id'], r_id, e2_dict['id']):
+            res.extend([e1_dict['mention'] + ' ' + verb + ' ' + e2_dict['mention'] for verb in verbs])
     if double_check:
-        res.append(' '.join([e1, e2]))
+        res.append(' '.join([e1_dict['mention'], e2_dict['mention']]))
     return res
 
 
