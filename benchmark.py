@@ -200,7 +200,8 @@ def benchmark_routine(extractor, config, output_name, facts_file, article_text_f
         print("Total predictions: {}\t correct%: {:.2f}%".format(n_predictions, 100 * n_correct / n_predictions))
         print("Total pairs: {}\t correct%: {:.2f}%".format(n_predictions, 100 * n_correct_pairs / n_predictions))
         print("Mean Reciprocal Rank (within correct pairs): {:.2f}".format(MRR))
-        all_outputs.append({'correct_percentage': str(100 * n_correct / n_predictions), 'MRR': str(MRR)})
+        all_outputs.append({'correct_percentage': 100 * n_correct / n_predictions, 'MRR': MRR,
+                            'pair_correct_percentage': 100 * n_correct_pairs / n_predictions})
 
     with open('benchmark_results/' + output_name + '_' + config['name'] + '.json', 'w') as f:
         json.dump([config] + all_outputs, f, indent=4)
@@ -290,7 +291,7 @@ def simple_benchmark(extractor, config, output_name='simple_benchmark_results', 
     MRR = np.mean(ranks ** (-1)) if ranks.size != 0 else -1
     print("Mean Reciprocal Rank (within correct pairs): {:.2f}".format(MRR))
 
-    results.append({'correct_percentage': str(100 * total_fact_correct / len(simple)), 'MRR': str(MRR)})
+    results.append({'correct_percentage': 100 * total_fact_correct / len(simple), 'MRR': MRR})
     with open('benchmark_results/' + output_name + '_' + config['name'] + '.json', 'w') as f:
         json.dump(results, f, indent=4)
 
