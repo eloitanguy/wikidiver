@@ -411,7 +411,7 @@ def suggest_entity_pairs(g: AMRGraph):
             # for a path to be able to take this test it needs to have a node before the LCA, ie lca_idx > 0
 
             if LCA_idx_in_e1_to_e2_path > 0:
-                if path[LCA_idx_in_path_from_root - 1][1].op in OPS and path[LCA_idx_in_path_from_root][1].op in OPS:
+                if path[LCA_idx_in_e1_to_e2_path - 1][1].op in OPS and path[LCA_idx_in_e1_to_e2_path][1].op in OPS:
                     continue  # we leave the distance at 9999 (Inf basically)
 
                 lca_node_idx = g.node_id_to_idx[e1_path_from_root[LCA_idx_in_path_from_root][0].id]  # lca idx @ g.nodes
