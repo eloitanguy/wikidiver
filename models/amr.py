@@ -630,9 +630,9 @@ def get_most_recurrent_sub_path(sentences, pair_node_ids):
                 else:
                     all_sub_paths[str(simplified_sub_path)]['count'] += 1
 
-    max_count, most_common_sub_path = 0, None
+    max_count, most_common_sub_path, length = 0, None, 0
     for d in all_sub_paths.values():
-        if d['count'] > max_count:
+        if d['count'] > max_count or (d['count'] == max_count and len(d['sub_path']) > length):
             max_count, most_common_sub_path = d['count'], d['sub_path']
 
     return most_common_sub_path
