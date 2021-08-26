@@ -302,7 +302,7 @@ class AMRGraph:
         return '\n'.join(tikz_string_list)
 
 
-def find_path_between(start_node_idx, end_node_idx, g: AMRGraph):
+def find_path_down(start_node_idx, end_node_idx, g: AMRGraph):
     """
     Returns a path from start_node_idx of the AMR tree g to end_node_idx. \n
     Requires start_node_idx to be higher in the tree!\n
@@ -321,7 +321,7 @@ def find_path_between(start_node_idx, end_node_idx, g: AMRGraph):
         son_idx = g.node_id_to_idx[son_id]
 
         try:
-            path_from_son_to_end = find_path_between(son_idx, end_node_idx, g)
+            path_from_son_to_end = find_path_down(son_idx, end_node_idx, g)
         except NoPath:
             continue
 
@@ -342,6 +342,30 @@ def find_lowest_common_ancestor(e1_path_from_root, e2_path_from_root):
 
     # if we're at the end then either the last node is the LCA (and one path is included in another)
     return min(len(e1_path_from_root), len(e2_path_from_root)) - 1
+
+
+def get_e1_e2_path(g: AMRGraph, e1_path_from_root, e2_path_from_root):
+    LCA_idx_in_path_from_root = find_lowest_common_ancestor(e1_path_from_root, e2_path_from_root)
+    # path e1 -> ... > LCA (flipped the node order but the links are broken)
+    path_e1_to_lca = e1_path_from_root[:LCA_idx_in_path_from_root - 1:-1] if LCA_idx_in_path_from_root != 0 \
+        else e1_path_from_root[::-1]
+    # path lCA -> [node -> ... -> e2] (LCA is excluded)
+    path_lca_excluded_to_e2 = e2_path_from_root[LCA_idx_in_path_from_root + 1:]
+
+    # flipping back the link, right now they are from i+1 to i
+    for idx in range(len(path_e1_to_lca) - 1):
+        link_from_next_to_here = path_e1_to_lca[idx + 1][1]
+        next_node = path_e1_to_lca[idx + 1][0]
+        link_from_here_to_next = AMRLink(op=link_from_next_to_here.op,
+                                         to_node_id=next_node.id,
+                                         to_node_idx=g.node_id_to_idx[next_node.id])
+        path_e1_to_lca[idx][1] = link_from_here_to_next  # updating the link to the right direction
+
+    # writing the link from the LCA to the next node in the path lca -> ... -> e2 (downward)
+    path_e1_to_lca[-1][1] = e1_path_from_root[LCA_idx_in_path_from_root][1]
+    path = path_e1_to_lca + path_lca_excluded_to_e2
+    LCA_idx_in_e1_to_e2_path = len(path_e1_to_lca) - 1  # the lca is the last element of this list
+    return path, LCA_idx_in_e1_to_e2_path, LCA_idx_in_path_from_root
 
 
 def suggest_entity_pairs(g: AMRGraph):
@@ -369,7 +393,7 @@ def suggest_entity_pairs(g: AMRGraph):
     paths_from_root = []
     for node in entities:
         try:
-            paths_from_root.append(find_path_between(0, g.node_id_to_idx[node.id], g))
+            paths_from_root.append(find_path_down(0, g.node_id_to_idx[node.id], g))
         except NoPath:
             paths_from_root.append(None)
 
@@ -383,27 +407,8 @@ def suggest_entity_pairs(g: AMRGraph):
             if e1_path_from_root is None or e2_path_from_root is None:  # if there is already no path, continue
                 continue
 
-            LCA_idx_in_path_from_root = find_lowest_common_ancestor(e1_path_from_root, e2_path_from_root)
-            # path e1 -> ... > LCA (flipped the node order but the links are broken)
-            path_e1_to_lca = e1_path_from_root[:LCA_idx_in_path_from_root - 1:-1] if LCA_idx_in_path_from_root != 0 \
-                else e1_path_from_root[::-1]
-            # path lCA -> [node -> ... -> e2] (LCA is excluded)
-            path_lca_excluded_to_e2 = e2_path_from_root[LCA_idx_in_path_from_root + 1:]
-
-            # flipping back the link, right now they are from i+1 to i
-            for idx in range(len(path_e1_to_lca) - 1):
-                link_from_next_to_here = path_e1_to_lca[idx + 1][1]
-                next_node = path_e1_to_lca[idx + 1][0]
-                link_from_here_to_next = AMRLink(op=link_from_next_to_here.op,
-                                                 to_node_id=next_node.id,
-                                                 to_node_idx=g.node_id_to_idx[next_node.id])
-                path_e1_to_lca[idx][1] = link_from_here_to_next  # updating the link to the right direction
-
-            # writing the link from the LCA to the next node in the path lca -> ... -> e2 (downward)
-            path_e1_to_lca[-1][1] = e1_path_from_root[LCA_idx_in_path_from_root][1]
-            path = path_e1_to_lca + path_lca_excluded_to_e2
-            LCA_idx_in_e1_to_e2_path = len(path_e1_to_lca) - 1  # the lca is the last element of this list
-
+            path, LCA_idx_in_e1_to_e2_path, LCA_idx_in_path_from_root = \
+                get_e1_e2_path(g, e1_path_from_root, e2_path_from_root)
             # we check whether the LCA in the path has invalid operators: this is the case if we have:
             #           op n                 op m
             # node ------up-------> LCA -----down-----> node      (first 'if')
@@ -588,3 +593,82 @@ class AMRParser:
             pool.close()
 
         return g
+
+
+def get_path(g: AMRGraph, e1_node_id, e2_node_id):
+    """
+    Outputs a path (list of (AMRNode, AMRLink)
+    from the node of id 'e1_node_id' to the node of id 'e1_node_id' in the graph g.
+    """
+    e1_path_from_root = find_path_down(0, g.node_id_to_idx[e1_node_id], g)
+    e2_path_from_root = find_path_down(0, g.node_id_to_idx[e2_node_id], g)
+    path, _, _ = get_e1_e2_path(g, e1_path_from_root, e2_path_from_root)
+    return path
+
+
+def get_simplified_path_list(path):
+    return [[path_element[0].description, path_element[1].op] for path_element in path]
+
+
+def get_most_recurrent_sub_path(sentences, pair_node_ids):
+    amr_parser = AMRParser()
+    # --- STEP 1 --- get the paths between the pairs (we want both directions)
+    paths = []
+    for sent, (e1_node_id, e2_node_id) in list(zip(sentences, pair_node_ids)):
+        g = amr_parser.parse_text(sent, NER=False)
+        paths.append(get_path(g, e1_node_id, e2_node_id))
+        paths.append(get_path(g, e2_node_id, e1_node_id))
+
+    # --- STEP 2 --- find the most common simplified sub-path (only descriptions and operators taken into account)
+    all_sub_paths = {}
+    for path in paths:
+        for start_idx in range(len(path)):
+            for end_idx in range(start_idx + 1, len(path)):
+                sub_path = path[start_idx:end_idx]
+                simplified_sub_path = get_simplified_path_list(sub_path)
+                if str(simplified_sub_path) not in all_sub_paths:
+                    all_sub_paths[str(simplified_sub_path)] = {'count': 1, 'sub_path': simplified_sub_path}
+                else:
+                    all_sub_paths[str(sub_path)]['count'] += 1
+
+    max_count, most_common_sub_path = 0, None
+    for d in all_sub_paths.values():
+        if d['count'] > max_count:
+            max_count, most_common_sub_path = d['count'], d['sub_path']
+
+    return most_common_sub_path
+
+
+def is_a_contiguous_sub_sequence_of(a, b):
+    """
+    Returns true if the list a is included in b (as a sequence: no separations allowed)
+    """
+    if len(a) > len(b):
+        return False
+    for start_idx in range(len(b) - len(a)):
+        if b[start_idx:start_idx + len(a)] == a:
+            return True
+    return False
+
+
+class AMRRelationDetector:
+    def __init__(self, simplified_sub_path, relation_name=None, relation_id=None):
+        self.amr_parser = AMRParser()
+        self.simplified_sub_path = simplified_sub_path
+        self.relation_name = relation_name
+        self.relation_id = relation_id
+
+    def detect_relation(self, sentence):
+        g = self.amr_parser.parse_text(sentence)
+        for e1_node_idx in range(len(g.nodes)):
+            if not g.nodes[e1_node_idx].ner:  # check if e1 is a detected entity
+                continue
+
+            for e2_node_idx in range(e1_node_idx + 1, len(g.nodes)):
+                if not g.nodes[e2_node_idx].ner:  # check if e2 is a detected entity
+                    continue
+
+                path_simplified = get_simplified_path_list(
+                    get_path(g, g.nodes[e1_node_idx].id, g.nodes[e2_node_idx].id))
+                if is_a_contiguous_sub_sequence_of(self.simplified_sub_path, path_simplified):
+                    return g.nodes[e1_node_idx], g.nodes[e2_node_idx]
