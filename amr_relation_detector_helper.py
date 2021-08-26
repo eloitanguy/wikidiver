@@ -29,6 +29,5 @@ while True:
 print('Ended input sentence loop, computing the most common sub-path ...')
 
 sub_path = get_most_recurrent_sub_path(sentences, pair_node_ids)
-simplified_sub_path = get_simplified_path_list(sub_path)
 
 print(sub_path)
