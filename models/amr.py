@@ -621,8 +621,8 @@ def get_most_recurrent_sub_path(sentences, pair_node_ids):
     # --- STEP 2 --- find the most common simplified sub-path (only descriptions are taken into account)
     all_sub_paths = {}
     for path in paths:
-        for start_idx in range(len(path)):
-            for end_idx in range(start_idx + 1, len(path)):
+        for start_idx in range(1, len(path) - 1):
+            for end_idx in range(start_idx + 1, len(path) - 1):
                 sub_path = path[start_idx:end_idx]
                 simplified_sub_path = get_simplified_path_list(sub_path)
                 if str(simplified_sub_path) not in all_sub_paths:
