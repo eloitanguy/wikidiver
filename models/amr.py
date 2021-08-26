@@ -607,7 +607,7 @@ def get_path(g: AMRGraph, e1_node_id, e2_node_id):
 
 
 def get_simplified_path_list(path):
-    return [[path_element[0].description, path_element[1].op] for path_element in path]
+    return [path_element[0].description for path_element in path]
 
 
 def get_most_recurrent_sub_path(sentences, pair_node_ids):
@@ -618,7 +618,7 @@ def get_most_recurrent_sub_path(sentences, pair_node_ids):
         g = amr_parser.parse_text(sent, NER=False)
         paths.append(get_path(g, e1_node_id, e2_node_id))
 
-    # --- STEP 2 --- find the most common simplified sub-path (only descriptions and operators taken into account)
+    # --- STEP 2 --- find the most common simplified sub-path (only descriptions are taken into account)
     all_sub_paths = {}
     for path in paths:
         for start_idx in range(len(path)):
