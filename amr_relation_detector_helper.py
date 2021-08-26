@@ -17,10 +17,10 @@ while True:
 	g = amr_parser.parse_text(sent, NER=False)
 	for line in g.original_text_representation[4:]:
 		print(line)
-	e1_node_id = input('Enter the node ID for e1 (the order does not matter): ')
+	e1_node_id = input('Enter the node ID for e1 (the order does matter): ')
 	if e1_node_id == 'STOP':
 		break
-	e2_node_id = input('Enter the node ID for e2 (the order does not matter): ')
+	e2_node_id = input('Enter the node ID for e2 (the order does matter): ')
 	if e2_node_id == 'STOP':
 		break
 	sentences.append(sent)

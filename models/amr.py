@@ -612,12 +612,11 @@ def get_simplified_path_list(path):
 
 def get_most_recurrent_sub_path(sentences, pair_node_ids):
     amr_parser = AMRParser()
-    # --- STEP 1 --- get the paths between the pairs (we want both directions)
+    # --- STEP 1 --- get the paths between the pairs
     paths = []
     for sent, (e1_node_id, e2_node_id) in list(zip(sentences, pair_node_ids)):
         g = amr_parser.parse_text(sent, NER=False)
         paths.append(get_path(g, e1_node_id, e2_node_id))
-        paths.append(get_path(g, e2_node_id, e1_node_id))
 
     # --- STEP 2 --- find the most common simplified sub-path (only descriptions and operators taken into account)
     all_sub_paths = {}
@@ -664,8 +663,8 @@ class AMRRelationDetector:
             if not g.nodes[e1_node_idx].ner:  # check if e1 is a detected entity
                 continue
 
-            for e2_node_idx in range(e1_node_idx + 1, len(g.nodes)):
-                if not g.nodes[e2_node_idx].ner:  # check if e2 is a detected entity
+            for e2_node_idx in range(len(g.nodes)):
+                if not g.nodes[e2_node_idx].ner or e1_node_idx == e2_node_idx:  # avoid auto-relations
                     continue
 
                 path_simplified = get_simplified_path_list(
