@@ -628,7 +628,7 @@ def get_most_recurrent_sub_path(sentences, pair_node_ids):
                 if str(simplified_sub_path) not in all_sub_paths:
                     all_sub_paths[str(simplified_sub_path)] = {'count': 1, 'sub_path': simplified_sub_path}
                 else:
-                    all_sub_paths[str(sub_path)]['count'] += 1
+                    all_sub_paths[str(simplified_sub_path)]['count'] += 1
 
     max_count, most_common_sub_path = 0, None
     for d in all_sub_paths.values():
