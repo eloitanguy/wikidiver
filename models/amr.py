@@ -677,3 +677,4 @@ class AMRRelationDetector:
                         'e2_id': e2.id,
                         'e2_name': e2.ner['name']
                     }
+        return {}
