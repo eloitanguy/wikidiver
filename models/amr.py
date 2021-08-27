@@ -185,7 +185,11 @@ class AMRGraph:
             # if op in ['name', 'wiki'], the child node is just information on the parent node:
             # no new node, just an update to the parent
 
-            if op == 'name':  # updating the parent's name: we have a node 'name' with a child for each word
+            # check if we have a name node with some content under it to parse into a name
+            not_last = parsing_idx < len(parsed_lines) - 1
+            name_to_parse = op == 'name' and not_last and current_indent < parsed_lines[parsing_idx + 1][0]
+
+            if name_to_parse:  # updating the parent's name: we have a node 'name' with a child for each word
                 name_indent = parsed_lines[parsing_idx + 1][0]  # the indent of the children of 'name' (words)
                 potential_word_index = parsing_idx + 1
                 name_list = []
