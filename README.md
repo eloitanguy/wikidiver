@@ -17,8 +17,9 @@ First of all it is required to install the python modules with:
 
     pip install -r requirements.txt
 
-In order to obtain all the dataset files, you can run the included code below or download the files from 
-[google drive](https://drive.google.com/drive/folders/1bHteMXBDD0UJ1r-t4aXfWx7Rkj0ag4JY?usp=sharing).
+In order to obtain all the dataset and model files, you can run the included code below or download the files from 
+[google drive](https://drive.google.com/drive/folders/1bHteMXBDD0UJ1r-t4aXfWx7Rkj0ag4JY?usp=sharing), which is a
+download of all our models and data.
 
 This repo uses spacy's 'en' model, please download it using:
 
@@ -29,6 +30,11 @@ We also use the SPRING AMR parsing in our pipeline
 directly from [the SPRING github](https://github.com/SapienzaNLP/spring). In order to make the AMR parsing scripts
 function, please download the [AMR parsing weights](http://nlp.uniroma1.it/AMR/AMR3.parsing-1.0.tar.bz2) (link from
 the SPRING github), and place the weights into ```models/spring_amr/AMR3.pt```
+
+### Dataset Setups
+
+Note that all the data setups are done using ```dataset_setups.py```, which details what each script does. You can set 
+up this repo by reading the helpers from that file or by reading this README.
 
 #### Obtaining verbs
 
@@ -215,7 +221,7 @@ These results hold true for the default configuration in ```config.py```:
 
 ## Hundo Benchmark summary
 
-These results hold true for the default configuration in ```config.py```:
+These results hold true for optimised thresholds (not the default configuration in ```config.py```):
 
 #### With Type Filtering
 
@@ -227,13 +233,11 @@ These results hold true for the default configuration in ```config.py```:
 |   V2.5  |     2179   |   2.52%   |      3.99%      |  0.73 |
 |    V3   |     12621  |   0.61%   |      2.12%      |  0.42 |
 
-## More random ideas
+## AMR models
 
-- in the benchmark, cluster the relations and give points for being in the right cluster
-- cluster the relations and build a classifier by cluster
-- don't try to extract a fact from two entities with there is no Wikipedia link between them
-- structured NER
-- TransE-aware fact extraction
-- graph-NN on the entity/relation tree for hierarchical thinking
-- reasoning on the POS tree
-- creating a sentence graph using attentions
+In order to parse a sentence into AMR format, use the ```AMRParser``` from ```models/amr.py```. This parser converts
+a raw text sentence into AMR format using [SPRING](https://github.com/SapienzaNLP/spring), and also detects
+Wikidata-vitals entities.
+
+Using the ```amr_relation_detection_helper.py```, you can build quickly a simple model that detects a specific relation,
+by giving it sentences that portray this relation.
