@@ -671,8 +671,11 @@ class AMRRelationDetector:
                 if not g.nodes[e2_node_idx].ner or e1_node_idx == e2_node_idx:  # avoid auto-relations
                     continue
 
-                path_simplified = get_simplified_path_list(
-                    get_path(g, g.nodes[e1_node_idx].id, g.nodes[e2_node_idx].id))
+                try:
+                    path_simplified = get_simplified_path_list(
+                        get_path(g, g.nodes[e1_node_idx].id, g.nodes[e2_node_idx].id))
+                except NoPath:  # only happens here if there is a negative polarity -> skip
+                    continue
                 if is_a_contiguous_sub_sequence_of(self.simplified_sub_path, path_simplified):
                     e1, e2 = g.nodes[e1_node_idx], g.nodes[e2_node_idx]
                     return {
