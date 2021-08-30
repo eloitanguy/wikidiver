@@ -679,9 +679,9 @@ class AMRRelationDetector:
                 if is_a_contiguous_sub_sequence_of(self.simplified_sub_path, path_simplified):
                     e1, e2 = g.nodes[e1_node_idx], g.nodes[e2_node_idx]
                     return {
-                        'e1_id': e1.id,
-                        'e1_name': e1.ner['name'],
-                        'e2_id': e2.id,
-                        'e2_name': e2.ner['name']
+                        'e1_node_id': e1.id,
+                        'e1_ner': e1.ner,
+                        'e2_node_id': e2.id,
+                        'e2_ner': e2.ner
                     }
         return {}
